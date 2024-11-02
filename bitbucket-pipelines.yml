@@ -1,4 +1,4 @@
-image: atlassian/default-image:latest
+image: node:20
 
 pipelines:
   default:
@@ -16,6 +16,7 @@ pipelines:
           - pip
         script:
           - cd server
+          - python3 -m pip install --upgrade pip  
           - pip install -r requirements.txt
           - flask run &
     - step:
