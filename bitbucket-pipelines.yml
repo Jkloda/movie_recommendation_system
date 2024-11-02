@@ -11,7 +11,7 @@ pipelines:
           - npm run build
 
     - step:
-        name: Install and Run Server
+        name: Install and Run Server #and run Tests
         image: python:3.9  # Python image for the server step
         caches:
           - pip
@@ -22,19 +22,6 @@ pipelines:
           - gunicorn -w 4 -b 0.0.0.0:5000 server:app &  # Run in the background
           - echo $! > gunicorn_pid.txt  # Save the PID
           - sleep 5
-    # - step:
-        #name: Run Python Tests
-       # image: python:3.9
-     #   caches:
-      #    - pip
-   #    script:
-    #      - cd server
-  #        - python3 -m pip install --upgrade pip  
- #         - pip install -r requirements.txt
-#          python -m pytest tests/  # Replace 'tests/' with your actual test directory
-    - step:
-        name: Stop Flask Server
-        image: python:3.9
-        script:
-          - kill $(cat gunicorn_pid.txt)
+        #-python -m pytest tests/  # Replace 'tests/' with your actual test directory
+
   # Create for PR Tests
