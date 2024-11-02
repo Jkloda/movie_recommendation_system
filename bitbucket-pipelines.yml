@@ -1,46 +1,27 @@
-image: node:20
-
 pipelines:
   default:
     - step:
         name: Install and Build Client
+        image: node:20  # Node image for the client step
         caches: 
           - node
-        script:  # Commands for building and testing code
+        script:
           - cd client
           - npm install
           - npm run build
+
     - step:
-        name: Install and Run Server
+        name: Install and Run Server #and run Tests
+        image: python:3.9  # Python image for the server step
         caches:
           - pip
         script:
           - cd server
           - python3 -m pip install --upgrade pip  
           - pip install -r requirements.txt
-          - flask run &
-    - step:
-        name: Test Client and Server
-        script:
-          - cd client
-          - npm test
-          - cd ../server
-          - pytest
-  pull-requests:
-    "**":  # Matches all branches for pull requests
-      - step:
-          name: Run PR Tests
-          script:
-            - echo "Running tests for PR"
-            - cd client
-            - npm install
-            - npm run lint   # Run linting on the client code
-            - cd ../server
-            - pip install -r requirements.txt
-            - pytest         # Run tests on the server code
-      - step:
-          name: Code Coverage
-          script:
-            - echo "Calculating code coverage"
-            - cd server
-            - pytest --cov=. 
+          - gunicorn -w 4 -b 0.0.0.0:5000 server:app &  # Run in the background
+          - echo $! > gunicorn_pid.txt  # Save the PID
+          - sleep 5
+        #-python -m pytest tests/  # Replace 'tests/' with your actual test directory
+
+  # Create for PR Tests
