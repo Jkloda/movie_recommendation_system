@@ -1,0 +1,45 @@
+image: node:20
+
+pipelines:
+  default:
+    - step:
+        name: Install and Build Client
+        caches: 
+          - node
+        script:  # Commands for building and testing code
+          - cd client
+          - npm install
+          - npm run build
+    - step:
+        name: Install and Run Server
+        caches:
+          - pip
+        script:
+          - cd server
+          - pip install -r requirements.txt
+          - flask run &
+    - step:
+        name: Test Client and Server
+        script:
+          - cd client
+          - npm test
+          - cd ../server
+          - pytest
+  pull-requests:
+    "**":  # Matches all branches for pull requests
+      - step:
+          name: Run PR Tests
+          script:
+            - echo "Running tests for PR"
+            - cd client
+            - npm install
+            - npm run lint   # Run linting on the client code
+            - cd ../server
+            - pip install -r requirements.txt
+            - pytest         # Run tests on the server code
+      - step:
+          name: Code Coverage
+          script:
+            - echo "Calculating code coverage"
+            - cd server
+            - pytest --cov=. 
