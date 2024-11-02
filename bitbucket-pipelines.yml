@@ -17,7 +17,11 @@ pipelines:
         script:
           - cd server
           - pip install -r requirements.txt
+<<<<<<< HEAD
           - flask run
+=======
+          - flask run &
+>>>>>>> 407467091b12a6d40c42ccb458ff8a0952c1a92a
     - step:
         name: Test Client and Server
         script:
