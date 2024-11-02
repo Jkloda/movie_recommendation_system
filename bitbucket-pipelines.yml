@@ -1,24 +1,26 @@
-image: node:20
-
 pipelines:
   default:
     - step:
         name: Install and Build Client
+        image: node:20  # Node image for the client step
         caches: 
           - node
-        script:  # Commands for building and testing code
+        script:
           - cd client
           - npm install
           - npm run build
+
     - step:
         name: Install and Run Server
+        image: python:3.9  # Python image for the server step
         caches:
           - pip
         script:
           - cd server
           - python3 -m pip install --upgrade pip  
           - pip install -r requirements.txt
-          - flask run &
+          - flask run
+        background: true 
     - step:
         name: Test Client and Server
         script:
