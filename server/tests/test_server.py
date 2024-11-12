@@ -11,7 +11,7 @@ def client():
     with app.test_client() as client:
         yield client
 
-def test_login_success():
+def test_login_success(client):
     response = client.post(
         'api/login',
         data=json.dumps(dict(
@@ -23,7 +23,7 @@ def test_login_success():
 
     assert response.code == 200
 
-def test_login_fail():
+def test_login_fail(client):
     response = client.post(
         'api/login',
         data=json.dumps(dict(
@@ -35,7 +35,7 @@ def test_login_fail():
     assert response.code == 401
     assert response.data == b'incorrect username or password'
 
-def test_signup_success():
+def test_signup_success(client):
     dob = datetime.datetime(1992, 06, 26)
     response = client.post(
         'api/signup',
@@ -52,7 +52,7 @@ def test_signup_success():
     assert response.code == 201
     assert response.data == b'success'   
 
-def test_signup_failed():
+def test_signup_failed(client):
     dob = datetime.datetime(1992, 06, 26)
     response = client.post(
         'api/signup',
