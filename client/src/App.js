@@ -1,21 +1,27 @@
 import './App.css';
-import React, { useEffect, useState } from 'react';
+//import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./components/Login";
 
 function App() {
-  const [data, setData] = useState(null);
+ /* const [data, setData] = useState(null);
 
 useEffect(() => {
   fetch('http://127.0.0.1:5000/api/data')
       .then(response => response.json())
       .then(data => setData(data.message))
       .catch(error => console.error("Error fetching data:", error));
-}, []);
+}, []); */
 
 return (
-  <div className="App">
-      <h1>{data || "Loading..."}</h1>
-  </div>
-);
+  <BrowserRouter>
+  <div className="App">        
+        <Routes>
+                    <Route path="/Login"element={<Login />}></Route>
+                  </Routes>
+        </div>
+      </BrowserRouter>
+      );
 }
 
 export default App;
