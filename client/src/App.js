@@ -1,10 +1,10 @@
-import './App.css';
+import "./App.css";
 //import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./components/Login";
 
 function App() {
- /* const [data, setData] = useState(null);
+  /* const [data, setData] = useState(null);
 
 useEffect(() => {
   fetch('http://127.0.0.1:5000/api/data')
@@ -13,15 +13,13 @@ useEffect(() => {
       .catch(error => console.error("Error fetching data:", error));
 }, []); */
 
-return (
-  <BrowserRouter>
-  <div className="App">        
-        <Routes>
-                    <Route path="/Login"element={<Login />}></Route>
-                  </Routes>
-        </div>
-      </BrowserRouter>
-      );
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/Login" element={<Login />}></Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
