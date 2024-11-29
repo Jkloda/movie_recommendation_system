@@ -65,8 +65,6 @@ def get_user():
             cursor = connection.cursor(dictionary=True)
             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             account = cursor.fetchone()
-            cursor.close()
-            connection.close()
             if sha256_crypt.verify(password, account['password']):
                 user = User(account)
                 login_user(user)
@@ -75,6 +73,9 @@ def get_user():
                 return jsonify({'message': 'incorrect username or password'}), 401
         except:
             return jsonify({"message": "error handling request"}), 400
+        finally:
+            cursor.close()
+            connection.close()
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -109,6 +110,9 @@ def register():
             return jsonify({'message': 'successfully created account'}), 200
         except Exception as e: 
             return jsonify({'message': f'error unknown server error {e}'}), 500
+        finally:
+            cursor.close()
+            connection.close()
 
     else:
         return jsonify({'message': 'please check http request body, username, email, password are missing or method not POST '}), 400 
