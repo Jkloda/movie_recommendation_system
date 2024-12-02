@@ -2,6 +2,7 @@ import "./App.css";
 //import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./components/Login";
+import Registration from "./components/Registration";
 
 function App() {
   /* const [data, setData] = useState(null);
@@ -17,6 +18,7 @@ useEffect(() => {
     <BrowserRouter>
       <Routes>
         <Route path="/Login" element={<Login />}></Route>
+        <Route path="/Registration" element={<Registration />}></Route>
       </Routes>
     </BrowserRouter>
   );
