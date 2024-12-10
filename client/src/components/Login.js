@@ -52,6 +52,10 @@ const Login = () => {
                   Login
                 </button>
               </form>
+              <br/>
+              <h3>Or</h3>
+              <br/>
+              <a class="button" href="https://127.0.0.1:443/google-login">Google Login</a>
               <footer className="login-footer">
                 <p>
                   Not a member?{" "}
