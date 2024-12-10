@@ -44,7 +44,7 @@ def get_google_provider_cfg():
 class User(UserMixin):
     def __init__(self, user):
         self.id = user['user_id']
-        self.username = user['username']
+        #self.username = user['username']
 
 @login_manager.user_loader
 def loader_user(user_id):
@@ -186,7 +186,24 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
     
-    return json.dumps({unique_id: unique_id, users_email: users_email, users_name: users_name})
+    
+    connection = connection_pool.get_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute('SELECT user_id FROM users WHERE email = %s;', (users_email,))
+    user_id = cursor.fetchone()
+    if user_id:
+        user = User(user_id)
+        login_user(user)
+        return redirect('https://localhost:3000/')
+    else: 
+        cursor.execute('INSERT INTO users (username, email, google_id) VALUES (%s, %s, %s);', (users_name, users_email, unique_id,))
+        connection.commit()
+        cursor.execute('SELECT LAST_INSERT_ID() AS user_id;')
+        user_id = cursor.fetchone()
+        user = User(user_id)
+        login_user(user)
+        return redirect('https://localhost:3000/')
+
 
 
 @app.route('/logout')
