@@ -96,16 +96,18 @@ def register():
     result = request.get_json(silent=True)
     if request.method == 'POST' and 'username' in request.form or result and 'password' in request.form or result and 'email' in request.form or result:
         try:
-            
+            # Retrieve account details from form or json 
             username = request.form.get('username') or result['username']
             password = request.form.get('password') or result['password']
             email = request.form.get('email') or result['email']
 
+            # Check username and email are in the correct format and use correct characters
             if not re.match(r'[^@]+@[^@]+\.[^@]+', email):
                 return jsonify({'message': 'incorrectly formatted email'}), 400
             elif not re.match(r'[a-zA-z0-9]+', username):
                 return jsonify({'message': 'incorrectly formatted username characters must be a-z, A-z, 0-9'}), 400
             
+            # Create pool connection and make db calls
             connection = connection_pool.get_connection()
             cursor = connection.cursor(dictionary=True)
             cursor.execute('SELECT username FROM users WHERE username = %s;', (username,))
@@ -113,11 +115,13 @@ def register():
             cursor.execute('SELECT email FROM users WHERE email = %s;', (email,))
             is_email = cursor.fetchone()
 
+            # Check for duplicate entries
             if is_username:
                 return jsonify({"message": "username already exists"})
             if is_email:
                 return jsonify({"message": "email already exists"})
             else:
+                # Hash password and make new user insert
                 password = sha256_crypt.hash(password)
                 cursor.execute('INSERT INTO users (username, password, email) VALUES (%s, %s, %s);', (username, password, email))
                 connection.commit()
@@ -133,12 +137,10 @@ def register():
 
 @app.route("/google-login")
 def login():
-    # Find out what URL to hit for Google login
+    # Generate Login URL and send redirect to URL
     google_provider_cfg = get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
-    # Use library to construct the request for Google login and provide
-    # scopes that let you retrieve user's profile from Google
     request_uri = client.prepare_request_uri(
         authorization_endpoint,
         redirect_uri=request.base_url + "/callback",
@@ -148,11 +150,11 @@ def login():
 
 @app.route("/google-login/callback")
 def callback():
-    # Get authorization code Google sent back to you
+    # Get authorization code 
     code = request.args.get("code")
     google_provider_cfg = get_google_provider_cfg()
     token_endpoint = google_provider_cfg["token_endpoint"]
-    # Prepare and send a request to get tokens! Yay tokens!
+    # Prepare and send a request to get tokens
     token_url, headers, body = client.prepare_token_request(
         token_endpoint,
         authorization_response=request.url,
@@ -166,18 +168,14 @@ def callback():
         auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
     )
 
-    # Parse the tokens!
+    # Parse token
     client.parse_request_body_response(json.dumps(token_response.json()))
-    # Now that you have tokens (yay) let's find and hit the URL
-    # from Google that gives you the user's profile information,
-    # including their Google profile image and email
+    # User token to make user detail get request
     userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
     uri, headers, body = client.add_token(userinfo_endpoint)
     userinfo_response = requests.get(uri, headers=headers, data=body)
-
-    # You want to make sure their email is verified.
-    # The user authenticated with Google, authorized your
-    # app, and now you've verified their email through Google!
+    
+    # Get user details from Google response
     if userinfo_response.json().get("email_verified"):
         unique_id = userinfo_response.json()["sub"]
         users_email = userinfo_response.json()["email"]
@@ -186,15 +184,17 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
     
-    
+    # Check if user email already exists on db
     connection = connection_pool.get_connection()
     cursor = connection.cursor(dictionary=True)
     cursor.execute('SELECT user_id FROM users WHERE email = %s;', (users_email,))
     user_id = cursor.fetchone()
+    # If exists follow login session flow
     if user_id:
         user = User(user_id)
         login_user(user)
         return redirect('https://localhost:3000/')
+    # If not exists then register user and follow login flow
     else: 
         cursor.execute('INSERT INTO users (username, email, google_id) VALUES (%s, %s, %s);', (users_name, users_email, unique_id,))
         connection.commit()
