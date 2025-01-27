@@ -42,23 +42,21 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
 
 def create_movie_table():
     headers = ["genres", "keywords", "original_title", "overview", "popularity", "release_date", "runtime", "spoken_languages", "title", "cast", "crew", "director"]
-    types = ["BLOB", "BLOB", "BLOB", "BLOB", "FLOAT", "BLOB", "FLOAT", "BLOB", "BLOB", "BLOB", "BLOB", "BLOB"]
+    types = ["TEXT", "TEXT", "TEXT", "TEXT", "FLOAT", "TEXT", "FLOAT", "TEXT", "TEXT", "TEXT", "TEXT", "TEXT"]
     data = pd.read_csv('../data/movie_dataset.csv', usecols=headers)
-    data_list = list()
-    for info in data:
-        data_list.append({''})
+    data = data.replace(np.nan, 0)
     columns = ", ".join([f"{header} {types[index]}" for index, header in enumerate(headers)])
     create_table = f'CREATE TABLE IF NOT EXISTS movies ({columns})'
     data = [tuple(row) for row in data.values]
     insert_statement = f'INSERT INTO movies ({", ".join(headers)}) VALUES (%s, %s, %s ,%s, %s, %s, %s, %s, %s, %s, %s, %s);'
+    
     try: 
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
-        '''cursor.execute(create_table)'''
+        cursor.execute(create_table)
         for row in data:
-            cursor.execute(insert_statement, row)
-        
-        
+            print(row)
+            cursor.execute(insert_statement, row)       
         connection.commit()
         cursor.close()
         connection.close()
