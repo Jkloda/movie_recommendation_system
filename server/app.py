@@ -41,27 +41,56 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
 )
 
 def create_movie_table():
-    headers = ["genres", "keywords", "original_title", "overview", "popularity", "release_date", "runtime", "spoken_languages", "title", "cast", "crew", "director"]
-    types = ["TEXT", "TEXT", "TEXT", "TEXT", "FLOAT", "TEXT", "FLOAT", "TEXT", "TEXT", "TEXT", "TEXT", "TEXT"]
+    headers = ["genres", "keywords", "original_title", "overview", "popularity", "release_date", "runtime", "spoken_languages", "title", "cast", "director"]
+    types = ["TEXT", "TEXT", "TEXT", "TEXT", "FLOAT", "TEXT", "FLOAT", "TEXT", "TEXT", "TEXT", "TEXT"]
+    #keys = [1,2,3,4,5,6,7,8,9,10]
     data = pd.read_csv('../data/movie_dataset.csv', usecols=headers)
     data = data.replace(np.nan, 0)
     columns = ", ".join([f"{header} {types[index]}" for index, header in enumerate(headers)])
-    create_table = f'CREATE TABLE IF NOT EXISTS movies ({columns})'
     data = [tuple(row) for row in data.values]
-    insert_statement = f'INSERT INTO movies ({", ".join(headers)}) VALUES (%s, %s, %s ,%s, %s, %s, %s, %s, %s, %s, %s, %s);'
+
+    create_table_movies = f'CREATE TABLE IF NOT EXISTS movies (id INT AUTO_INCREMENT PRIMARY KEY, {columns});'
+    create_table_genres = f'CREATE TABLE IF NOT EXISTS genres (id INT AUTO_INCREMENT PRIMARY KEY, genre TEXT);'
+    create_table_bridge = f'CREATE TABLE IF NOT EXISTS movies_genres (movies_id INT, genres_id INT, PRIMARY KEY (movies_id, genres_id), FOREIGN KEY (movies_id) REFERENCES movies(id) ON DELETE CASCADE, FOREIGN KEY (genres_id) REFERENCES genres(id) ON DELETE CASCADE);'
     
+    insert_statement_movies = f'INSERT INTO movies ({", ".join(headers)}) VALUES (%s, %s, %s ,%s, %s, %s, %s, %s, %s, %s, %s);'
+    insert_statement_genres = f'INSERT INTO genres (genre) VALUES (%s);'
+    insert_statement_bridge = f'INSERT INTO movies_genres (movies_id, genres_id) VALUES (%s, %s);'
+
     try: 
         connection = connection_pool.get_connection()
         cursor = connection.cursor()
-        cursor.execute(create_table)
+        cursor.execute(create_table_movies)
+        cursor.execute(create_table_genres)
+        cursor.execute(create_table_bridge)
+
         for row in data:
-            print(row)
-            cursor.execute(insert_statement, row)       
+            genre_ids = []
+            genres = str(row[0]) if row[0] else ""
+            genres_list = genres.split()
+            
+            for genre in genres_list:
+                select_statement = f'SELECT id FROM genres WHERE genre = %s'
+                cursor.execute(select_statement, (genre,))
+                genres_id = cursor.fetchone()
+                if(genres_id):
+                    genre_ids.append(genres_id[0])
+                else:
+                    cursor.execute(insert_statement_genres, (genre,))
+                    row_id = cursor.lastrowid
+                    genre_ids.append(row_id)
+            
+            cursor.execute(insert_statement_movies, (row)) 
+            movie_id = cursor.lastrowid
+            for gen_id in genre_ids:
+                cursor.execute(insert_statement_bridge, (movie_id, gen_id))
         connection.commit()
-        cursor.close()
-        connection.close()
     except Exception as e:
         print(f'error inserting {e}')
+    finally:
+        cursor.close()
+        connection.close()
+
 
 create_movie_table()
 
