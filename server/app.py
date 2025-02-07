@@ -91,7 +91,7 @@ def create_movie_table():
             while i < (len(cast) - 1):
                 actors_list.append(cast[i] + ' ' + cast[i + 1])
                 i = i + 2
-            # Iterate genre list 
+            # Iterate genre list, check if genre exists save id if it does, insert and get id if it doesn't
             for genre in genres_list:
                 select_statement = f'SELECT id FROM genres WHERE genre = %s'
                 cursor.execute(select_statement, (genre,))
@@ -102,7 +102,7 @@ def create_movie_table():
                     cursor.execute(insert_statement_genres, (genre,))
                     row_id = cursor.lastrowid
                     genre_ids.append(row_id)
-            
+            # Iterate actors list, check if actor exists save id if they do, insert and get id if they don't
             for member in actors_list:
                 select_statement = f'SELECT id FROM actors WHERE actor = %s'
                 cursor.execute(select_statement, (member,))
@@ -113,25 +113,26 @@ def create_movie_table():
                     cursor.execute(insert_statement_cast, (member,))
                     row_id = cursor.lastrowid
                     cast_ids.append(row_id)
-
+            # Insert row data generated from headers list
             cursor.execute(insert_statement_movies, row) 
             movie_id = cursor.lastrowid
-
+            # Insert movie id with genre id into the genre bridge table, if not exists
             for gen_id in genre_ids:
                 cursor.execute('SELECT * FROM movies_genres WHERE movies_id = %s and genres_id = %s', (movie_id, gen_id))
                 duplicate = cursor.fetchone()
                 if(duplicate is None):
                     cursor.execute(insert_statement_bridge, (movie_id, gen_id))
-            
+            # Insert cast id with movie id into the actors bridge table, if not exists
             for cast_id in cast_ids:
                 cursor.execute('SELECT * FROM movies_actors WHERE movies_id = %s and actors_id = %s', (movie_id, cast_id))
                 duplicate = cursor.fetchone()
                 if(duplicate is None):
                     cursor.execute(insert_statement_cast_bridge, (movie_id, cast_id))
-
+        # Commit changes
         connection.commit()
     except Exception as e:
         print(f'error inserting {e}')
+    # Close connection and cursor
     finally:
         cursor.close()
         connection.close()
