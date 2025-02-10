@@ -25,3 +25,11 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+CREATE TABLE users_movies (
+    users_id BINARY(16),
+    movies_id INT,
+    FOREIGN KEY users_id REFERENCES users(id) ON CASCADE DELETE,
+    FOREIGN KEY movies_id REFERENCES movies(id) ON CASCADE DELETE,
+    PRIMARY KEY (users_id, movies_id)
+) 
