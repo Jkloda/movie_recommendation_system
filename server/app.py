@@ -2,6 +2,7 @@ from flask import Flask, jsonify, session, request, redirect, url_for
 from flask_cors import CORS
 import os
 import re
+import sys
 import json
 import requests
 import json
@@ -11,7 +12,9 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
+sys.path.append(os.path.abspath('./faiss'))
 from oauthlib.oauth2 import WebApplicationClient
+from Indexer import Indexer
 
 load_dotenv()
 app = Flask(__name__)
@@ -27,11 +30,11 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https://192.168.50.200:3000"])
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
-
-
 login_manager = LoginManager()
 login_manager.init_app(app)
-
+indexer = Indexer()
+#indexer.create_dataframe()
+indexer.create_indexes_and_meta_data()
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="moviefinder_pool",
     user=os.getenv('USER'),
@@ -167,7 +170,7 @@ def create_movie_table():
         connection.close()
 
 
-create_movie_table()
+#create_movie_table()
 
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
@@ -196,6 +199,16 @@ def loader_user(user_id):
 @login_required
 def get_data():
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
+
+@app.route('/api/search', methods=['POST'])
+def get_recommendations():
+    movie = request.get_json(silent=True)['movie']
+    try:
+        result = indexer.search_similar(movie)
+        return jsonify({'movies': result})
+    except Exception as e:
+        return jsonify({'error: ': e})
+
 
 @app.route('/login', methods=['GET','POST'])
 def get_user():
