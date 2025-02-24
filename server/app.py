@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import json
+import asyncio
 import requests
 import json
 import mysql.connector.pooling
@@ -14,7 +15,7 @@ import pandas as pd
 import numpy as np
 sys.path.append(os.path.abspath('./faiss'))
 from oauthlib.oauth2 import WebApplicationClient
-from Indexer import Indexer
+from Recommender import Recommender
 
 load_dotenv()
 app = Flask(__name__)
@@ -32,9 +33,8 @@ CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https:/
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 login_manager = LoginManager()
 login_manager.init_app(app)
-indexer = Indexer()
-#indexer.create_dataframe()
-indexer.create_indexes_and_meta_data()
+recommender = Recommender()
+
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="moviefinder_pool",
     user=os.getenv('USER'),
@@ -201,13 +201,14 @@ def get_data():
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
 
 @app.route('/api/search', methods=['POST'])
-def get_recommendations():
+async def get_recommendations():
     movie = request.get_json(silent=True)['movie']
     try:
-        result = indexer.search_similar(movie)
+        #movies = list(movie)
+        result = await recommender.get_recommendation(movie)
         return jsonify({'movies': result})
     except Exception as e:
-        return jsonify({'error: ': e})
+        return jsonify({'error: ': str(e)})
 
 
 @app.route('/login', methods=['GET','POST'])
