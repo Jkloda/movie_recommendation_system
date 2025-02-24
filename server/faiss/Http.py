@@ -1,0 +1,30 @@
+import httpx
+import asyncio
+
+class HttpLayer():
+    def __init__(self):
+        self.transport = httpx.AsyncHTTPTransport(retries=5)
+        self.headers = {'Content-Type':'application/json'}
+        self.url = 'http://localhost:11434/api/generate'
+        
+
+    async def prompt_lama(self, prompt):
+        body = {
+            'model': 'llama3.2',
+            'prompt': f'return the five most similar movies, with no additional text other than the response format [title: description, title: description], given the following movies and their descriptions {prompt}',
+            'stream': False
+        }
+        try:
+            async with httpx.AsyncClient(transport=self.transport, timeout=30.0) as client:
+                response = await client.post(url=self.url, headers=self.headers, json=body)
+                if response.status_code == 200:  
+                    return response.json()['response']
+                else:
+                    return 'error', 400
+        except Exception as e:
+            return 'error', 500
+            
+    async def get_recommendations(self, prompt):
+        response = await self.prompt_lama(prompt)
+        return response
+
