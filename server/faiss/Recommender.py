@@ -9,8 +9,7 @@ class Recommender:
         self.indexer = Indexer()
 
     def search_index(self, favourites):
-        total_movies = 1
-        #len(favourites)
+        total_movies = len(favourites)
         index_results = self.indexer.search_similar(favourites, total_movies)
         self.recommendation.append(str(index_results))
 
