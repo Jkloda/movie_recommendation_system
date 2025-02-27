@@ -4,7 +4,6 @@ import os
 import re
 import sys
 import json
-import asyncio
 import requests
 import json
 import mysql.connector.pooling
@@ -200,15 +199,35 @@ def loader_user(user_id):
 def get_data():
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
 
+@login_required
 @app.route('/api/search', methods=['POST'])
 async def get_recommendations():
-    movie = request.get_json(silent=True)['movie']
+    genre = request.get_json(silent=True)['genre']
+    search = request.get_json(silent=True)['search']
+    id = current_user.get_id()
     try:
-        #movies = list(movie)
-        result = await recommender.get_recommendation(movie)
+        if genre: 
+            select_movies_statement = "SELECT movies.*, GROUP_CONCAT(DISTINCT keywords.keyword) AS keywords, GROUP_CONCAT(DISTINCT genres.genre) AS genres, GROUP_CONCAT(DISTINCT actors.actor) as actors FROM movies \
+                JOIN users_movies ON movies.id = users_movies.movies_id \
+                JOIN movies_keywords ON movies.id = movies_keywords.movies_id JOIN keywords ON movies_keywords.keywords_id = keywords.id \
+                JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id \
+                JOIN movies_actors ON movies.id = movies_actors.movies_id JOIN actors ON movies_actors.actors_id = actors.id \
+                WHERE genres.genre = %s AND users_movies.user_id = %s GROUP BY movies.id;"
+            connection = connection_pool.get_connection()
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute(select_movies_statement, (genre, id))
+            movies = cursor.fetchall()
+            print(movies)
+            movies = list(movies[0])
+            result = await recommender.get_recommendation(movies)
+        else: 
+            result = await recommender.get_recommendation(search)
         return jsonify({'movies': result})
     except Exception as e:
         return jsonify({'error: ': str(e)})
+    finally:
+        connection.close()
+        cursor.close()
 
 
 @app.route('/login', methods=['GET','POST'])
