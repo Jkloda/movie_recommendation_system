@@ -5,6 +5,7 @@ import re
 import sys
 import json
 import requests
+import uuid
 import json
 import mysql.connector.pooling
 from passlib.hash import sha256_crypt
@@ -26,9 +27,11 @@ GOOGLE_DISCOVERY_URL = (
 )
 app.config["SECRET_KEY"] = os.urandom(24)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config['SESSION_PERMANENT'] = True
+app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https://192.168.50.200:3000"])
+CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https://192.168.50.200:3000", "https://localhost:5555"])
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -175,23 +178,33 @@ def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
 class User(UserMixin):
-    def __init__(self, user):
-        self.id = user['user_id']
-        #self.username = user['username']
+    def __init__(self, user_id):
+        self.id = str(user_id)
+    def get_id(self):
+        return self.id
+        
 
 @login_manager.user_loader
-def loader_user(user_id):
+def load_user(user_id):
     try:
-        connection = connection_pool.get_connection()
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT user_id, username FROM users WHERE user_id = %s;", (user_id,))
-        user = cursor.fetchone()
-        cursor.close()
-        connection.close()
-        return User(user) if user else None
+        user_id = user_id.encode(encoding='utf-8')
+        print(user_id)
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute("SELECT user_id, username FROM users WHERE user_id = %s;", (user_id,))
+                user = cursor.fetchone()
+        if user:
+            #user_id = uuid.UUID(bytes=user['user_id'])
+            print(f'string: {user_id}')
+            return User(user_id)
+        else:
+            print('no matching id')
+            return None
     except Exception as e:
         print("Error loading user:", e)
         return None
+    
+    
         
 
 @app.route('/api/data', methods=['GET'])
@@ -200,8 +213,8 @@ def get_data():
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
 
 @app.route('/api/search', methods=['POST'])
-@login_required
 async def get_recommendations():
+    '''SELECT movies.*, GROUP_CONCAT(genres.genre) as genre, GROUP_CONCAT(keywords.keyword) as keyword FROM movies JOIN users_movies ON movies.id = users_movies.movies_id JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id JOIN movies_keywords ON movies_keywords.movies_id = movies.id JOIN keywords ON movies_keywords.keywords_id = keywords.id WHERE users_movies.users_id = 0xBC7A88EBF55111EFA449A036BCACCEA1 GROUP BY movies.id \G'''
     req = request.get_json(silent=True)
     genre = False
     search = False
@@ -212,7 +225,8 @@ async def get_recommendations():
     user_id = current_user.id
     try:
         if current_user.is_authenticated:
-            print(id)
+            print(user_id)
+            print(current_user)
         if genre: 
             print('here')
             select_movies_statement = "SELECT movies.*, GROUP_CONCAT(DISTINCT keywords.keyword) AS keywords, GROUP_CONCAT(DISTINCT genres.genre) AS genres, GROUP_CONCAT(DISTINCT actors.actor) as actors FROM movies \
@@ -247,17 +261,20 @@ def get_user():
             password = request.form.get('password') or result['password']
             connection = connection_pool.get_connection()
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT users.username, users.user_id, users.password FROM users WHERE username = %s", (username,))
             account = cursor.fetchone()
             cursor.close()
             connection.close()
+            if not account:
+                return jsonify({'message': 'incorrect username'}), 401
             if sha256_crypt.verify(password, account['password']):
-                user = User(account)
+                user_id = str(account['user_id'])[2:-1]
+                user = User(user_id)
                 login_user(user)
                 return jsonify({'message': 'successfully logged in',
                                 "username": f"{username}"}), 200
             else:
-                return jsonify({'message': 'incorrect username or password'}), 401
+                return jsonify({'message': 'incorrect password'}), 401
         except Exception as e:
             return jsonify({"message": f"error handling request {e}"}), 400
         
