@@ -179,42 +179,32 @@ def get_google_provider_cfg():
 
 class User(UserMixin):
     def __init__(self, user_id):
-        self.id = str(user_id)
+        self.id = user_id
     def get_id(self):
         return self.id
         
-
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        user_id = user_id.encode(encoding='utf-8')
-        print(user_id)
         with connection_pool.get_connection() as connection:
             with connection.cursor(dictionary=True) as cursor:
-                cursor.execute("SELECT user_id, username FROM users WHERE user_id = %s;", (user_id,))
+                cursor.execute("SELECT user_id as user_id, username FROM users WHERE user_id = %s;", (user_id,))
                 user = cursor.fetchone()
         if user:
-            #user_id = uuid.UUID(bytes=user['user_id'])
-            print(f'string: {user_id}')
-            return User(user_id)
+            return User(user['user_id'])
         else:
-            print('no matching id')
             return None
     except Exception as e:
-        print("Error loading user:", e)
         return None
     
-    
-        
-
 @app.route('/api/data', methods=['GET'])
 @login_required
 def get_data():
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
 
 @app.route('/api/search', methods=['POST'])
+@login_required
 async def get_recommendations():
-    '''SELECT movies.*, GROUP_CONCAT(genres.genre) as genre, GROUP_CONCAT(keywords.keyword) as keyword FROM movies JOIN users_movies ON movies.id = users_movies.movies_id JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id JOIN movies_keywords ON movies_keywords.movies_id = movies.id JOIN keywords ON movies_keywords.keywords_id = keywords.id WHERE users_movies.users_id = 0xBC7A88EBF55111EFA449A036BCACCEA1 GROUP BY movies.id \G'''
     req = request.get_json(silent=True)
     genre = False
     search = False
@@ -224,32 +214,50 @@ async def get_recommendations():
         search = req['search']
     user_id = current_user.id
     try:
-        if current_user.is_authenticated:
-            print(user_id)
-            print(current_user)
         if genre: 
-            print('here')
             select_movies_statement = "SELECT movies.*, GROUP_CONCAT(DISTINCT keywords.keyword) AS keywords, GROUP_CONCAT(DISTINCT genres.genre) AS genres, GROUP_CONCAT(DISTINCT actors.actor) as actors FROM movies \
-                JOIN users_movies ON movies.id = users_movies.movies_id \
+                JOIN users_movies ON users_movies.movies_id = movies.id \
                 JOIN movies_keywords ON movies.id = movies_keywords.movies_id JOIN keywords ON movies_keywords.keywords_id = keywords.id \
                 JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id \
                 JOIN movies_actors ON movies.id = movies_actors.movies_id JOIN actors ON movies_actors.actors_id = actors.id \
                 WHERE genres.genre = %s AND users_movies.users_id = %s GROUP BY movies.id;"
-            connection = connection_pool.get_connection()
-            cursor = connection.cursor(dictionary=True)
-            cursor.execute(select_movies_statement, (genre, user_id))
-            movies = cursor.fetchall()
-            print(movies)
-            movies = list(movies[0])
+            with connection_pool.get_connection() as connection:
+                with connection.cursor(dictionary=True) as cursor:
+                    cursor.execute(select_movies_statement, (genre, user_id))
+                    movies = cursor.fetchall()
+            if not movies:
+                return jsonify({'message': f'No movies favourited in selected genre, please favourite some {genre} movies or get recommendations by text'}), 400
             result = await recommender.get_recommendation(movies)
         else: 
             result = await recommender.get_recommendation(search)
         return jsonify({'movies': result})
     except Exception as e:
         return jsonify({'error: ': str(e)})
-    finally:
-        connection.close()
-        cursor.close()
+    
+@app.route('/api/add-favourite', methods=['POST'])
+@login_required
+def add_favourite():
+    user_id = current_user.id
+    req = request.get_json(silent=True)
+    select_movie_statement = "SELECT movies.id FROM movies WHERE title = %s;"
+    insert_favourite_statement = 'INSERT INTO users_movies (users_id, movies_id) VALUES (%s, %s);'
+    if "title" in req:
+        title = req['title']
+    else:
+        return jsonify({'message': 'no movie title'}), 400
+    try:
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute(select_movie_statement, (title,))
+                movie_id = cursor.fetchone()
+                if movie_id:
+                    cursor.execute(insert_favourite_statement, (user_id, movie_id['id']))
+                else:
+                    return jsonify({'message': 'no movie with that title'}), 400
+        return 'success', 200
+    except Exception as e:
+        return jsonify({'message': f'unknown server error'}), 500
+    
 
 
 @app.route('/login', methods=['GET','POST'])
@@ -261,14 +269,14 @@ def get_user():
             password = request.form.get('password') or result['password']
             connection = connection_pool.get_connection()
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("SELECT users.username, users.user_id, users.password FROM users WHERE username = %s", (username,))
+            cursor.execute("SELECT users.username, users.user_id as user_id, users.password FROM users WHERE username = %s", (username,))
             account = cursor.fetchone()
             cursor.close()
             connection.close()
             if not account:
                 return jsonify({'message': 'incorrect username'}), 401
             if sha256_crypt.verify(password, account['password']):
-                user_id = str(account['user_id'])[2:-1]
+                user_id = account['user_id']
                 user = User(user_id)
                 login_user(user)
                 return jsonify({'message': 'successfully logged in',
@@ -276,7 +284,7 @@ def get_user():
             else:
                 return jsonify({'message': 'incorrect password'}), 401
         except Exception as e:
-            return jsonify({"message": f"error handling request {e}"}), 400
+            return jsonify({"message": f"error handling request {e}"}), 500
         
             
 
@@ -316,13 +324,18 @@ def register():
                 connection.commit()
             return jsonify({'message': 'successfully created account'}), 200
         except Exception as e: 
-            return jsonify({'message': f'error unknown server error {e}'}), 500
+            return jsonify({'message': f'error unknown server error'}), 500
         finally:
             cursor.close()
             connection.close()
 
     else:
         return jsonify({'message': 'please check http request body, username, email, password are missing or method not POST '}), 400 
+    
+@app.route("/api/get-movies", methods=['GET'])
+@login_required
+def get_movies():
+    #40 r 2 (120)
 
 @app.route("/google-login")
 def login():
