@@ -2,6 +2,7 @@ import faiss
 import numpy as np
 import pandas as pd
 import json
+import pdb
 from sentence_transformers import SentenceTransformer
 
 class Indexer:
@@ -26,17 +27,21 @@ class Indexer:
         headers = ["genres", "keywords", "original_title", "overview", "popularity", "release_date", "runtime", "spoken_languages", "title", "cast", "director"]
         self.data = pd.read_csv('../data/movie_dataset.csv', usecols=headers).fillna("")
 
-    def embed_movie(self, movie):
-        if isinstance(movie, str):
-            text_input = movie
-        else:    
-            text_input = f"{movie['title']} {movie['original_title']} {movie['genres']} {movie['overview']} {movie['keywords']} {movie['actors']} {movie['director']} {movie['spoken_languages']}"
+    def embed_movie(self, movies):
+        #pdb.set_trace()
+        text_input = ''
+        if isinstance(movies, str):
+            text_input = movies
+        else: 
+            for movie in movies:   
+                text_input = f"{text_input} {movie['title']} {movie['original_title']} {movie['genres']} {movie['overview']} {movie['keywords']} {movie['actors']} {movie['director']} {movie['spoken_languages']} "
+        print(text_input)
         chunks = self.chunk_text(text_input)
         embeddings = self.model.encode(chunks, normalize_embeddings=True)
         return embeddings.mean(axis=0)
     
     def add_movies(self):
-        for index, movie in self.data.iterrows():
+        for index, movie in self.data.iterrows(): 
             embedding = self.embed_movie(movie)
             embedding = np.expand_dims(embedding, axis=0)
             faiss.normalize_L2(embedding)
@@ -50,7 +55,7 @@ class Indexer:
 
     def search_similar(self, query, movies_searched):
         query_embedding = self.embed_movie(query)
-        _, indices = self.index.search(np.array([query_embedding], dtype=np.float32), movies_searched+5)
+        _, indices = self.index.search(np.array([query_embedding], dtype=np.float32), 5)
         results= ''
         for i in indices[0]:
             results = f'{results} [{self.metadata[str(i)]}]'
