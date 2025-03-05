@@ -253,9 +253,35 @@ def add_favourite():
                 movie_id = cursor.fetchone()
                 if movie_id:
                     cursor.execute(insert_favourite_statement, (user_id, movie_id['id']))
+                    connection.commit()
                 else:
                     return jsonify({'message': 'no movie with that title'}), 400
-        return 'success', 200
+        return jsonify({'message': 'success'}), 200
+    except Exception as e:
+        return jsonify({'message': f'unknown server error'}), 500
+    
+@app.route('/api/delete-favourite', methods=['DELETE'])
+@login_required
+def delete_favourite():
+    user_id = current_user.id
+    req = request.get_json(silent=True)
+    select_movie_statement = "SELECT movies.id FROM movies WHERE title = %s;"
+    delete_favourite_statement = 'DELETE FROM users_movies WHERE (users_id, movies_id) = (%s, %s);'
+    if "title" in req:
+        title = req['title']
+    else:
+        return jsonify({'message': 'no movie title'}), 400
+    try:
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute(select_movie_statement, (title,))
+                movie_id = cursor.fetchone()
+                if movie_id:
+                    cursor.execute(delete_favourite_statement, (user_id, movie_id['id']))
+                    connection.commit()
+                else:
+                    return jsonify({'message': 'no movie with that title'}), 400
+        return jsonify({'message': 'success'}), 200
     except Exception as e:
         return jsonify({'message': f'unknown server error'}), 500
     
@@ -336,18 +362,30 @@ def register():
 @app.route("/api/get-movies", methods=['GET'])
 @login_required
 def get_movies():
-    limit = int(request.args.get('limit'))
-    if limit == 0:
-        max_limit = 40
-    elif limit < 4800: 
-        max_limit = limit + 40
+    query = None
+    if 'limit' in request.args:
+        limit = int(request.args.get('limit'))
+
+        if limit == 0:
+            max_limit = 40
+        elif limit < 4800: 
+            max_limit = limit + 40
+        else:
+            max_limit = 4802
+        select_movies_statement = "SELECT movies.title, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id GROUP BY movies.id LIMIT %s, %s;"
     else:
-        max_limit = 4802
-    select_movies_statement = "SELECT movies.title, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id GROUP BY movies.id LIMIT %s, %s;"
+        return jsonify({'message': 'must include limit'}), 400
+    if 'query' in request.args:
+        query = request.args.get('query')
+        query = f"%{query}%"
+        select_movies_statement = "SELECT movies.title, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id WHERE movies.title LIKE %s GROUP BY movies.id LIMIT %s, %s;"
     try: 
         with connection_pool.get_connection() as connection:
             with connection.cursor(dictionary=True) as cursor:
-                cursor.execute(select_movies_statement, (limit, max_limit,))
+                if query:
+                    cursor.execute(select_movies_statement, (query, limit, max_limit,))
+                else:
+                    cursor.execute(select_movies_statement, (limit, max_limit,))
                 movies = cursor.fetchall()
         if movies:
             return jsonify({
