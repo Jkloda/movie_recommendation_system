@@ -35,7 +35,7 @@ CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https:/
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 login_manager = LoginManager()
 login_manager.init_app(app)
-recommender = Recommender()
+
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="moviefinder_pool",
@@ -205,6 +205,7 @@ def get_data():
 @app.route('/api/search', methods=['POST'])
 @login_required
 async def get_recommendations():
+    recommender = Recommender()
     req = request.get_json(silent=True)
     genre = False
     search = False
@@ -335,7 +336,29 @@ def register():
 @app.route("/api/get-movies", methods=['GET'])
 @login_required
 def get_movies():
-    #40 r 2 (120)
+    limit = int(request.args.get('limit'))
+    if limit == 0:
+        max_limit = 40
+    elif limit < 4800: 
+        max_limit = limit + 40
+    else:
+        max_limit = 4802
+    select_movies_statement = "SELECT movies.title, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id GROUP BY movies.id LIMIT %s, %s;"
+    try: 
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute(select_movies_statement, (limit, max_limit,))
+                movies = cursor.fetchall()
+        if movies:
+            return jsonify({
+                'movies': movies,
+                'limit': max_limit
+            }), 200
+        else:
+            return jsonify({'message': 'error, no movies received, check limit parameter'}), 400
+    except Exception as e:
+            return jsonify({'message': f'unknown server error {e}'}), 500
+
 
 @app.route("/google-login")
 def login():
