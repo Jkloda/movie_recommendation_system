@@ -1,8 +1,9 @@
 from flask import Flask, jsonify, session, request, redirect, url_for
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
 import re
 import sys
+from werkzeug import Response
 import json
 import requests
 import uuid
@@ -16,6 +17,7 @@ import numpy as np
 sys.path.append(os.path.abspath('./faiss'))
 from oauthlib.oauth2 import WebApplicationClient
 from Recommender import Recommender
+from urllib.parse import unquote
 
 load_dotenv()
 app = Flask(__name__)
@@ -30,8 +32,16 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config['SESSION_PERMANENT'] = True
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_COOKIE_SECURE"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https://192.168.50.200:3000", "https://localhost:5555"])
+app.config["SESSION_COOKIE_SAMESITE"] = 'None'
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+CORS(
+    app, 
+    supports_credentials=True, 
+    origins=["https://127.0.0.1:3000", "https://192.168.50.200:3000", "https://localhost:5555", "https://localhost:3000"],
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "DELETE"]
+)
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -363,34 +373,42 @@ def register():
 @login_required
 def get_movies():
     query = None
+    select_favourited_movies = "SELECT movies.id FROM movies\
+                JOIN users_movies ON users_movies.movies_id = movies.id \
+                WHERE users_movies.users_id = %s GROUP BY movies.id;"
     if 'limit' in request.args:
         limit = int(request.args.get('limit'))
-
+        print(limit)
+        show_records = 40
         if limit == 0:
             max_limit = 40
         elif limit < 4800: 
             max_limit = limit + 40
         else:
-            max_limit = 4802
-        select_movies_statement = "SELECT movies.title, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id GROUP BY movies.id LIMIT %s, %s;"
+            show_records = 2
+        select_movies_statement = "SELECT movies.title, movies.id, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id GROUP BY movies.id LIMIT %s OFFSET %s;"
     else:
         return jsonify({'message': 'must include limit'}), 400
     if 'query' in request.args:
         query = request.args.get('query')
+        print(query)
         query = f"%{query}%"
-        select_movies_statement = "SELECT movies.title, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id WHERE movies.title LIKE %s GROUP BY movies.id LIMIT %s, %s;"
+        select_movies_statement = "SELECT movies.title, movies.id, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id WHERE movies.title LIKE %s GROUP BY movies.id;"
     try: 
         with connection_pool.get_connection() as connection:
             with connection.cursor(dictionary=True) as cursor:
                 if query:
-                    cursor.execute(select_movies_statement, (query, limit, max_limit,))
+                    cursor.execute(select_movies_statement, (query,))
                 else:
-                    cursor.execute(select_movies_statement, (limit, max_limit,))
+                    cursor.execute(select_movies_statement, (show_records, max_limit,))
                 movies = cursor.fetchall()
+                cursor.execute(select_favourited_movies, (current_user.id,))
+                favourites = cursor.fetchall()
         if movies:
             return jsonify({
                 'movies': movies,
-                'limit': max_limit
+                'limit': max_limit,
+                "favourites": favourites
             }), 200
         else:
             return jsonify({'message': 'error, no movies received, check limit parameter'}), 400
