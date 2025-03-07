@@ -31,10 +31,7 @@ export function Searchbar() {
 	}, [movies])
 
 	useEffect(() => {
-		console.log('fav: ', favourites)
-		console.log(movies)
 		const alreadyFavourited = movies.map((movie) => {
-			console.log(movie.id)
 			if(favourites.includes(movie.id)){
 				return true
 			} else {
@@ -84,7 +81,7 @@ export function Searchbar() {
 			alert('This action experienced an error, please refresh the page or login')
 		}
 	}
-   
+    
 	async function handleSubmit(event) {
 		event.preventDefault()
 		let uri = `https://127.0.0.1:443/api/get-movies?limit=${limit}&query=${formData}`
