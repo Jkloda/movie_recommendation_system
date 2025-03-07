@@ -368,7 +368,40 @@ def register():
 
     else:
         return jsonify({'message': 'please check http request body, username, email, password are missing or method not POST '}), 400 
-    
+
+@app.route("/api/get-account", methods=['GET'])
+@login_required
+def get_account():
+    try:
+        select_account_statement = 'SELECT users.email, users.username FROM users WHERE users.user_id = %s;'
+        with connection_pool.get_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(select_account_statement, (current_user.id,))
+                account = cursor.fetchone()
+        if account:
+            return jsonify({'account': account}), 200
+        else: 
+            return jsonify({'message': 'no account with that id'})
+    except Exception as e:
+        return jsonify({'message': 'unknown server error'})
+
+
+@app.route("/api/get-favourites", methods=['GET'])
+@login_required
+def get_favourites():
+    try:
+        select_favourited_movies = "SELECT movies.id, movies.title FROM movies\
+                JOIN users_movies ON users_movies.movies_id = movies.id \
+                WHERE users_movies.users_id = %s GROUP BY movies.id;"
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                
+                    cursor.execute(select_favourited_movies, (current_user.id,))
+                    movies = cursor.fetchall()
+        return jsonify({"movies": movies})
+    except Exception as e:
+            return jsonify({'message': f'unknown server error {e}'}), 500
+
 @app.route("/api/get-movies", methods=['GET'])
 @login_required
 def get_movies():
@@ -402,7 +435,7 @@ def get_movies():
                 else:
                     cursor.execute(select_movies_statement, (show_records, max_limit,))
                 movies = cursor.fetchall()
-                cursor.execute(select_favourited_movies, (current_user.id,))
+                favourites = cursor.execute(select_favourited_movies, (current_user.id,))
                 favourites = cursor.fetchall()
         if movies:
             return jsonify({
