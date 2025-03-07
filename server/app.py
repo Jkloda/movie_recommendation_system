@@ -1,8 +1,9 @@
 from flask import Flask, jsonify, session, request, redirect, url_for
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import os
 import re
 import sys
+from werkzeug import Response
 import json
 import requests
 import uuid
@@ -16,6 +17,7 @@ import numpy as np
 sys.path.append(os.path.abspath('./faiss'))
 from oauthlib.oauth2 import WebApplicationClient
 from Recommender import Recommender
+from urllib.parse import unquote
 
 load_dotenv()
 app = Flask(__name__)
@@ -30,12 +32,20 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config['SESSION_PERMANENT'] = True
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_COOKIE_SECURE"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-CORS(app, supports_credentials=True, origins=["https://localhost:3000", "https://192.168.50.200:3000", "https://localhost:5555"])
+app.config["SESSION_COOKIE_SAMESITE"] = 'None'
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+CORS(
+    app, 
+    supports_credentials=True, 
+    origins=["https://127.0.0.1:3000", "https://192.168.50.200:3000", "https://localhost:5555", "https://localhost:3000"],
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "DELETE"]
+)
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 login_manager = LoginManager()
 login_manager.init_app(app)
-recommender = Recommender()
+
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="moviefinder_pool",
@@ -205,6 +215,7 @@ def get_data():
 @app.route('/api/search', methods=['POST'])
 @login_required
 async def get_recommendations():
+    recommender = Recommender()
     req = request.get_json(silent=True)
     genre = False
     search = False
@@ -252,9 +263,35 @@ def add_favourite():
                 movie_id = cursor.fetchone()
                 if movie_id:
                     cursor.execute(insert_favourite_statement, (user_id, movie_id['id']))
+                    connection.commit()
                 else:
                     return jsonify({'message': 'no movie with that title'}), 400
-        return 'success', 200
+        return jsonify({'message': 'success'}), 200
+    except Exception as e:
+        return jsonify({'message': f'unknown server error'}), 500
+    
+@app.route('/api/delete-favourite', methods=['DELETE'])
+@login_required
+def delete_favourite():
+    user_id = current_user.id
+    req = request.get_json(silent=True)
+    select_movie_statement = "SELECT movies.id FROM movies WHERE title = %s;"
+    delete_favourite_statement = 'DELETE FROM users_movies WHERE (users_id, movies_id) = (%s, %s);'
+    if "title" in req:
+        title = req['title']
+    else:
+        return jsonify({'message': 'no movie title'}), 400
+    try:
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute(select_movie_statement, (title,))
+                movie_id = cursor.fetchone()
+                if movie_id:
+                    cursor.execute(delete_favourite_statement, (user_id, movie_id['id']))
+                    connection.commit()
+                else:
+                    return jsonify({'message': 'no movie with that title'}), 400
+        return jsonify({'message': 'success'}), 200
     except Exception as e:
         return jsonify({'message': f'unknown server error'}), 500
     
@@ -335,7 +372,49 @@ def register():
 @app.route("/api/get-movies", methods=['GET'])
 @login_required
 def get_movies():
-    #40 r 2 (120)
+    query = None
+    select_favourited_movies = "SELECT movies.id FROM movies\
+                JOIN users_movies ON users_movies.movies_id = movies.id \
+                WHERE users_movies.users_id = %s GROUP BY movies.id;"
+    if 'limit' in request.args:
+        limit = int(request.args.get('limit'))
+        print(limit)
+        show_records = 40
+        if limit == 0:
+            max_limit = 40
+        elif limit < 4800: 
+            max_limit = limit + 40
+        else:
+            show_records = 2
+        select_movies_statement = "SELECT movies.title, movies.id, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id GROUP BY movies.id LIMIT %s OFFSET %s;"
+    else:
+        return jsonify({'message': 'must include limit'}), 400
+    if 'query' in request.args:
+        query = request.args.get('query')
+        print(query)
+        query = f"%{query}%"
+        select_movies_statement = "SELECT movies.title, movies.id, movies.overview, GROUP_CONCAT(genres.genre) as genre FROM movies JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id WHERE movies.title LIKE %s GROUP BY movies.id;"
+    try: 
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                if query:
+                    cursor.execute(select_movies_statement, (query,))
+                else:
+                    cursor.execute(select_movies_statement, (show_records, max_limit,))
+                movies = cursor.fetchall()
+                cursor.execute(select_favourited_movies, (current_user.id,))
+                favourites = cursor.fetchall()
+        if movies:
+            return jsonify({
+                'movies': movies,
+                'limit': max_limit,
+                "favourites": favourites
+            }), 200
+        else:
+            return jsonify({'message': 'error, no movies received, check limit parameter'}), 400
+    except Exception as e:
+            return jsonify({'message': f'unknown server error {e}'}), 500
+
 
 @app.route("/google-login")
 def login():
