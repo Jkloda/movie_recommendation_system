@@ -7,8 +7,8 @@ export const loginUser = async (credentials) => {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // Include credentials (cookies, HTTP authentication, etc.)
-      body: JSON.stringify(credentials), // Convert the credentials object to a JSON string
+      credentials: "include", 
+      body: JSON.stringify(credentials), 
     });
 
     if (!response.ok) {

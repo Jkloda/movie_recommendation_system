@@ -1,19 +1,36 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { loginUser } from "./LoginService";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "./LoginService.js";
 import "./Login.css";
 
-const Login = () => {
+export const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [result, setResult] = useState("");
   const [show, setShow] = useState(true);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let loginResult = await loginUser({ username, password });
+    const url = "https://127.0.0.1:443/login";
+    let response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", 
+        body: JSON.stringify({username, password}), 
+      });
+  
+      if (!response.ok) {
+        const errorDetails = await response.json();
+        throw new Error(errorDetails.message || "Failed to login");
+      }
+  
+    const jsonRes = await response.json();
+    setResult(jsonRes);
     setShow(!setShow);
-    setResult(loginResult);
+    setTimeout(() => navigate("/search"), 1000);
   };
 
   return (
@@ -55,7 +72,7 @@ const Login = () => {
               <br/>
               <h3>Or</h3>
               <br/>
-              <a class="button" href="https://127.0.0.1:443/google-login">Google Login</a>
+              <a className="button" href="https://127.0.0.1:443/google-login">Google Login</a>
               <footer className="login-footer">
                 <p>
                   Not a member?{" "}
@@ -96,4 +113,3 @@ const Login = () => {
   );
 };
 
-export default Login;

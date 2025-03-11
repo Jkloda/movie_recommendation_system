@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "./Registration.css";
 
-const Registration = function () {
+export const Registration = function () {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -106,4 +106,3 @@ const Registration = function () {
   );
 };
 
-export default Registration;
