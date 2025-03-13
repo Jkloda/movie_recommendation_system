@@ -1,80 +1,98 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import axios from "axios";
 
-const SearchBar = ({ items, onSearch }) => {
-  const [queryText, setQueryText] = useState("");
-  const [searchCategory, setSearchCategory] = useState("name");
+export const SemanticSearchBar = () => {
+  const [query, setQuery] = useState("");
+  const [searchType, setSearchType] = useState("name");
+  const [results, setResults] = useState([]);
+  const [error, setError] = useState("");
 
-  const handleSearchResult = (event) => {
+  // Handle user input changes
+  const handleChange = (e) => {
+    setQuery(e.target.value);
+  };
+
+  // Handle search type selection change
+  const handleSearchTypeChange = async (e) => {
+    setSearchType(e.target.value);
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+
+    if (!query) {
+      return;
+    }
+
     try {
-      const query = event.target.value.toLowerCase();
-      setQueryText(query);
+      let response;
 
-      const filteredItems = items.filter((item) => {
-        switch (searchCategory) {
-          case "name":
-            return item.name.toLowerCase().includes(query);
-          case "genre":
-            return item.genres.some((genre) =>
-              genre.toLowerCase().includes(query)
-            );
-          default:
-            throw new Error("Invalid search category");
-        }
-      });
+      if (searchType === "genre") {
+        // Send request as genre
+        response = await axios.post(
+          "https://127.0.0.1:443/api/search/",
+          JSON.stringify({
+            genre: query,
+          })
+        );
+      } else {
+        //Send request as search query
+        response = await axios.post(
+          "https://127.0.0.1:443/api/search/",
+          JSON.stringify({
+            search: query,
+          })
+        );
+      }
 
-      onSearch(filteredItems);
-    } catch (error) {
-      console.error("No result", error);
+      setResults(response.data.results);
+      setError("");
+    } catch (err) {
+      console.error("Search error:", err);
+      setError("Failed to fetch results.");
     }
   };
 
   return (
-    <div className="search-bar">
-      <div className="search-controls">
-        <select
-          value={searchCategory}
-          onChange={(e) => setSearchCategory(e.target.value)}
-          className="search-select"
-        >
-          <option value="name">Name</option>
-          <option value="genre">Genre</option>
-        </select>
+    <div>
+      <form onSubmit={handleSearch}>
+        <div>
+          <label htmlFor="search-type">Search By: </label>
+          <select
+            id="search-type"
+            value={searchType}
+            onChange={handleSearchTypeChange}
+          >
+            <option value="name">Name</option>
+            <option value="genre">Genre</option>
+          </select>
+        </div>
+
         <input
           type="text"
-          placeholder={`Search by ${searchCategory}...`}
-          value={queryText}
-          onChange={handleSearchResult}
-          className="search-input"
+          value={query}
+          onChange={handleChange}
+          placeholder={`Search by ${searchType === "genre" ? "genre" : "name"}`}
         />
+        <button type="submit">Search</button>
+      </form>
+
+      {error && <p>{error}</p>}
+
+      <div>
+        <h3>Results:</h3>
+        {results.length > 0 ? (
+          <ul>
+            {results.map((result) => (
+              <li key={result.id}>
+                {result.title} - {result.genre}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No results found.</p>
+        )}
       </div>
     </div>
   );
 };
-
-// Mockdata:
-const SemanticSearchBar = () => {
-  const [filteredMovies, setFilteredMovies] = useState([]);
-
-  const Mockmovies = [
-    { id: 1, name: "Inception", genres: ["Action", "Sci-Fi"] },
-    { id: 2, name: "The Dark Knight", genres: ["Action", "Drama"] },
-    { id: 3, name: "Interstellar", genres: ["Adventure", "Sci-Fi"] },
-  ];
-
-  return (
-    <div>
-      <h1>Movie Search</h1>
-      <SearchBar items={Mockmovies} onSearch={setFilteredMovies} />
-
-      <div className="results">
-        {filteredMovies.map((movie) => (
-          <div key={movie.id} className="movie-card">
-            <h3>{movie.name}</h3>
-            <p>Genres: {movie.genres.join(", ")}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-export default SemanticSearchBar;
