@@ -1,172 +1,174 @@
-import {useState, useEffect} from "react"
-import heart_selected from './assets/heart_selected.png'
-import heart_deselected from './assets/heart_deselected.png'
+import { useState, useEffect, useRef } from "react";
+import heart_selected from "./assets/heart_selected.png";
+import heart_deselected from "./assets/heart_deselected.png";
+import "./styles/Searchbar.css";
 
-/* 	MOViE FiNDER searchbar		*
-*	needs:	search terms input	*
-*/
-
-/* User input (i.e the search terms)    *
-*  is stored as a 'state'object called  *
-*  'formData'			        *
-*  output currently logged to console	*
-*  ..see function 'handleSubmit' for 	*
-*  connection to API			*
-*/	
+const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
+const TMDB_IMAGE_BASE_URL = process.env.REACT_APP_TMDB_IMAGE_BASE_URL;
 
 export function Searchbar() {
-	const [formData, setFormData] = useState("")
-	const [movies, setMovies] = useState([])
-	const [limit, setLimit] = useState(0)
-	const [favourites, setFavourites] = useState([])
-	const [likeButton, setLikeButton] = useState()
+  const [formData, setFormData] = useState("");
+  const [movies, setMovies] = useState([]);
+  const [limit, setLimit] = useState(0);
+  const [favourites, setFavourites] = useState([]);
+  const [likeButton, setLikeButton] = useState([]);
+  const [movieUpdate, setMovieUpdate] = useState(true);
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    if (movies && favourites.length > 0) {
+      const unpacked = favourites.map((fav) => fav.id || fav);
+      setFavourites(unpacked);
+    }
+  }, [movies]);
 
-	useEffect(() => {
-		if(movies){
-			let unpacked_favourites = favourites.map((favourite) => {
-				return favourite.id;
-			})
-			setFavourites(unpacked_favourites)
-		}
-	}, [movies])
+  useEffect(() => {
+    const favStates = movies.map((movie) => favourites.includes(movie.id));
+    setLikeButton(favStates);
+  }, [favourites, movies]);
 
-	useEffect(() => {
-		const alreadyFavourited = movies.map((movie) => {
-			if(favourites.includes(movie.id)){
-				return true
-			} else {
-				return false
-			}
-		})
-		setLikeButton(alreadyFavourited)
-	}, [favourites])
+  const handleChange = (e) => {
+    setFormData(e.target.value);
+    setMovies([]);
+    setLimit(0);
+  };
 
-	function handleChange(event) {
-		const {value} = event.target
-		setMovies(null)
-		setLimit(0)
-		setFormData(value)
-	}
+  const handleClick = (title, index) => {
+    const url = likeButton[index]
+      ? "https://127.0.0.1:443/api/delete-favourite"
+      : "https://127.0.0.1:443/api/add-favourite";
 
-	function handleClick(title, index){
-		try{	
-			!likeButton[index]
-			?fetch('https://127.0.0.1:443/api/add-favourite',{
-				method: 'POST',
-				body: JSON.stringify({
-					title: title
-				}),
-				headers:{
-					'Content-Type': 'application/json'
-				},
-				credentials: 'include'
-			})
-			:fetch('https://127.0.0.1:443/api/delete-favourite',{
-				method: 'DELETE',
-				body: JSON.stringify({
-					title: title
-				}),
-				headers:{
-					'Content-Type': 'application/json'
-				},
-				credentials: 'include'
-			})
+    fetch(url, {
+      method: likeButton[index] ? "DELETE" : "POST",
+      body: JSON.stringify({ title }),
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
 
-			setLikeButton(prev => {
-				const newButtonArray = [...prev]
-				newButtonArray[index] = !newButtonArray[index]
-				return newButtonArray
-			})
-		} catch(e){
-			alert('This action experienced an error, please refresh the page or login')
-		}
-	}
-    
-	async function handleSubmit(event) {
-		event.preventDefault()
-		let uri = `https://127.0.0.1:443/api/get-movies?limit=${limit}&query=${formData}`
-		uri = encodeURI(uri)
-		try{
-			const res = await fetch(uri,{
-				method: 'GET',
-				credentials: 'include',
-				headers: {
-					'Content-Type': 'html/text'
-				}
+    setLikeButton((prev) => {
+      const updated = [...prev];
+      updated[index] = !updated[index];
+      return updated;
+    });
+  };
 
-			})
-			const jsonRes = await res.json()
-			setLimit(jsonRes.limit)
-			setMovies(jsonRes.movies)
-			setFavourites(jsonRes.favourites)
-		} catch(e){
-			alert('This action experienced an error, please refresh the page or login')
-		}
-	}
+  const fetchMoviePoster = async (title) => {
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${title}`
+      );
+      const data = await res.json();
+      return data.results?.[0]?.poster_path || null;
+    } catch (error) {
+      console.error("Error fetching poster:", error);
+      return null;
+    }
+  };
 
-	return (
-		<>
-			<div
-				style={{
-					textAlign: 'center'
-				}}
-			>
-				<form onSubmit={handleSubmit}>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const uri = encodeURI(
+      `https://127.0.0.1:443/api/get-movies?limit=${limit}&query=${formData}`
+    );
 
-        		               <h3>SEARCH MOViE FiNDER</h3>
-					<input
-						placeholder="Search for movies"			
-						type="text"
-						onChange={handleChange}
-						name="searchTerms"
-						value={formData}
-						id="search"
-						style={{
-							width: '50%'
-						}}
-					/>
+    try {
+      const res = await fetch(uri, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "html/text" },
+      });
+      const json = await res.json();
+      setLimit(json.limit);
+      setMovies(json.movies);
+      setFavourites(json.favourites || []);
+      setMovieUpdate((prev) => !prev);
+    } catch {
+      alert("Something went wrong. Please refresh or login.");
+    }
+  };
 
-        		                <br /> <br />
+  useEffect(() => {
+    const fetchPosters = async () => {
+      const updated = await Promise.all(
+        movies.map(async (movie) => {
+          const poster = await fetchMoviePoster(movie.title);
+          return { ...movie, poster_path: poster };
+        })
+      );
+      setMovies(updated);
+    };
 
+    if (movies.length > 0) fetchPosters();
+  }, [movieUpdate]);
 
-				</form>
-				{
-					movies
-					?<div style={{
-						display:'grid',
-						gridTemplateRows: `repeat(${movies.length}, 1fr)`,
-						gap: '2rem'
-					}}>
-						{
-							movies.map((movie, index) => {
-								return <div 
-									key={`mov-${index}`}
-									style={{
-										display:'grid',
-										gridTemplateColumns: '1fr 1fr',
-										width: '20rem',
-										justifyItems: 'center',
-										alignItems: 'center',
-										gap: '1rem',
-										textAlign: 'center',
-										alignSelf: 'center',
-										justifySelf: 'center'
-									}}
-									>
-										<h5>{movie.title}</h5>
-										<div onClick={() => {
-											handleClick(movie.title, index)
-											
-										}}>
-											<img src={likeButton?likeButton[index]?heart_selected:heart_deselected:null} width={15}></img>
-										</div>
-								</div>
-							})
-						}
-					</div>
-					:null
-				}
-			</div>
-		</>
-	)
+  const scroll = (direction) => {
+    const scrollAmount = 300;
+    if (direction === "left") {
+      scrollRef.current.scrollLeft -= scrollAmount;
+    } else {
+      scrollRef.current.scrollLeft += scrollAmount;
+    }
+  };
+
+  return (
+    <div className="search-container">
+      <form onSubmit={handleSubmit}>
+        <h1 className="search-title">Add movie to your favourites</h1>
+        <input
+          className="search-input"
+          placeholder="Search for movies"
+          type="text"
+          onChange={handleChange}
+          name="searchTerms"
+          value={formData}
+        />
+      </form>
+
+      {movies.length > 0 && (
+        <div className="scroll-wrapper">
+          <button className="scroll-btn left" onClick={() => scroll("left")}>
+            ◀
+          </button>
+
+          <div className="movie-row-container" ref={scrollRef}>
+            {movies.map((movie, index) => {
+              const posterUrl = movie.poster_path
+                ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
+                : null;
+
+              return (
+                <div key={`mov-${index}`} className="movie-card">
+                  {posterUrl ? (
+                    <img
+                      src={posterUrl}
+                      alt={movie.title}
+                      className="movie-img"
+                    />
+                  ) : (
+                    <p>No poster available</p>
+                  )}
+                  <h4 className="movie-title">{movie.title}</h4>
+                  <div
+                    onClick={() => handleClick(movie.title, index)}
+                    className="heart-icon"
+                  >
+                    <img
+                      src={
+                        likeButton[index] ? heart_selected : heart_deselected
+                      }
+                      width={25}
+                      alt="heart icon"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button className="scroll-btn right" onClick={() => scroll("right")}>
+            ▶
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
