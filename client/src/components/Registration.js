@@ -1,20 +1,21 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Registration.css";
 
-export const Registration = function () {
+export const Registration = function ({ setIsAuthenticated }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [dataInput, setDataInput] = useState(null);
   const [errors, setErrors] = useState({}); // To store form validation errors
 
+  const navigate = useNavigate();
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     // Basic validation
     let formErrors = {};
-
     if (!fullName) formErrors.fullName = "Full name is required";
     if (!email) formErrors.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(email)) formErrors.email = "Email is invalid";
@@ -34,6 +35,11 @@ export const Registration = function () {
     setEmail("");
     setPassword("");
     setErrors({});
+
+    // Set user as authenticated after successful registration
+    setIsAuthenticated(true);
+
+    navigate("/Homepage");
   };
 
   const handleFullNameChange = (e) => {
@@ -105,4 +111,3 @@ export const Registration = function () {
     </div>
   );
 };
-
