@@ -11,7 +11,7 @@ class HttpLayer():
     async def prompt_lama(self, prompt):
         body = {
             'model': 'llama3.2',
-            'prompt': f'ten most similar movies, no additional text, do not repeat movies in prompt, format [title: description], [title: description], given the following {prompt}',
+            'prompt': f'ten most similar movies, no additional text, do not repeat movies in prompt, format [title§ description], [title§ description], given the following {prompt}',
             'stream': False
         }
         try:
