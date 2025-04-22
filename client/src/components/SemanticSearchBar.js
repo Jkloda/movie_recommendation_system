@@ -1,98 +1,117 @@
-import React, { useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
+import "../styles/SemanticSearchBar.css";
 
-export const SemanticSearchBar = () => {
-  const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState("name");
-  const [results, setResults] = useState([]);
-  const [error, setError] = useState("");
+export function SemanticSearchBar() {
+  const [genre, setGenre] = useState(""); // State for the genre
+  const [query, setQuery] = useState(""); // State for the query
+  const [movies, setMovies] = useState([]); // State for the search results
+  const [isLoading, setIsLoading] = useState(false); // State for loading status
+  const [error, setError] = useState(null); // State for error handling
+  const [formattedMovies, setFormattedMovies] = useState([]);
 
-  // Handle user input changes
-  const handleChange = (e) => {
-    setQuery(e.target.value);
-  };
+  // Handle form submission
+  const handleSearch = async (event) => {
+    event.preventDefault();
 
-  // Handle search type selection change
-  const handleSearchTypeChange = async (e) => {
-    setSearchType(e.target.value);
-  };
-
-  const handleSearch = async (e) => {
-    e.preventDefault();
-
-    if (!query) {
+    if (!genre && !query) {
+      setError("Please provide a genre or query.");
       return;
     }
 
     try {
-      let response;
+      setIsLoading(true);
+      setError(null);
 
-      if (searchType === "genre") {
-        // Send request as genre
-        response = await axios.post(
-          "https://127.0.0.1:443/api/search/",
-          JSON.stringify({
-            genre: query,
-          })
-        );
-      } else {
-        //Send request as search query
-        response = await axios.post(
-          "https://127.0.0.1:443/api/search/",
-          JSON.stringify({
-            search: query,
-          })
+      const response = await fetch("https://127.0.0.1:443/api/search", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          genre: genre,
+          search: query,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to fetch results"
         );
       }
 
-      setResults(response.data.results);
-      setError("");
+      setMovies(data.movies || "");
     } catch (err) {
-      console.error("Search error:", err);
-      setError("Failed to fetch results.");
+      setError(err.message);
+      setMovies([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div>
-      <form onSubmit={handleSearch}>
-        <div>
-          <label htmlFor="search-type">Search By: </label>
-          <select
-            id="search-type"
-            value={searchType}
-            onChange={handleSearchTypeChange}
-          >
-            <option value="name">Name</option>
-            <option value="genre">Genre</option>
-          </select>
-        </div>
+  useEffect(() => {
+    (async function formatMovies() {
+      let splitArray;
+      let moviesArray;
+      if (movies.length > 0) {
+        splitArray = movies.split("]  [");
+        let lastIndex = splitArray.length - 1;
 
+        splitArray[0] = await splitArray[0].slice(1, splitArray[0].length - 1);
+
+        splitArray[lastIndex] = await splitArray[lastIndex].slice(
+          splitArray[lastIndex][0],
+          splitArray[lastIndex].length - 1
+        );
+        moviesArray = await splitArray.map((movie) => {
+          return movie.split("§ ");
+        });
+        setFormattedMovies(moviesArray);
+        console.log(moviesArray);
+      }
+      console.log(splitArray);
+    })();
+  }, [movies]);
+
+  return (
+    <div className="semantic-search-container">
+      <form onSubmit={handleSearch} role="search">
+        <label htmlFor="genre-search">Search by Genre</label>
         <input
+          id="genre-search"
+          type="text"
+          value={genre}
+          onChange={(e) => setGenre(e.target.value)}
+          placeholder="Enter genre (e.g., Action, Comedy)"
+          aria-label="Genre search"
+        />
+
+        <label htmlFor="query-search">Search by Plot/Description</label>
+        <input
+          id="query-search"
           type="text"
           value={query}
-          onChange={handleChange}
-          placeholder={`Search by ${searchType === "genre" ? "genre" : "name"}`}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter plot, keywords, or description"
+          aria-label="Query search"
         />
-        <button type="submit">Search</button>
+
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Searching..." : "Search"}
+        </button>
       </form>
 
-      {error && <p>{error}</p>}
+      {error && <div className="error-message">{error}</div>}
 
-      <div>
-        <h3>Results:</h3>
-        {results.length > 0 ? (
-          <ul>
-            {results.map((result) => (
-              <li key={result.id}>
-                {result.title} - {result.genre}
-              </li>
-            ))}
-          </ul>
+      <div className="search-results">
+        {movies && typeof movies === "string" ? (
+          <p>{movies}</p>
         ) : (
           <p>No results found.</p>
         )}
       </div>
     </div>
   );
-};
+}
