@@ -6,7 +6,6 @@ import sys
 from werkzeug import Response
 import json
 import requests
-import uuid
 import json
 import mysql.connector.pooling
 from passlib.hash import sha256_crypt
@@ -18,10 +17,17 @@ sys.path.append(os.path.abspath('./faiss'))
 from oauthlib.oauth2 import WebApplicationClient
 from Recommender import Recommender
 from urllib.parse import unquote
+from dotenv import load_dotenv
+from flasgger import Swagger
 
 load_dotenv()
+
 app = Flask(__name__)
+swagger = Swagger(app)
 # Configuration
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+TMDB_SEARCH_URL = "https://api.themoviedb.org/3/search/movie"
+TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
 GOOGLE_CLIENT_ID = os.getenv("CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 GOOGLE_DISCOVERY_URL = (
@@ -81,19 +87,31 @@ def load_user(user_id):
 @app.route('/api/data', methods=['GET'])
 @login_required
 def get_data():
+    """
+    Get basic protected data.
+    ---
+    security:
+      - cookieAuth: []
+    responses:
+      200:
+        description: Basic data returned successfully.
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Hello from Flask with CORS!"
+    """
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
 
 @app.route('/api/search', methods=['POST'])
 @login_required
 async def get_recommendations():
     recommender = Recommender()
-    req = request.get_json(silent=True)
-    genre = False
-    search = False
-    if 'genre' in req:
-        genre = req['genre']
-    if 'search' in req: 
-        search = req['search']
+    req = request.get_json(silent=True) or {}
+    print("Parsed JSON:", req)  # Debug line
+    genre = req.get('genre', False)
+    search = req.get('search', False)
     user_id = current_user.id
     try:
         if genre: 
@@ -112,6 +130,8 @@ async def get_recommendations():
             result = await recommender.get_recommendation(movies)
         else: 
             result = await recommender.get_recommendation(search)
+        for movie in result:
+            title = movie.get("title", "")
         return jsonify({'movies': result})
     except Exception as e:
         return jsonify({'error: ': str(e)})
@@ -166,7 +186,51 @@ def delete_favourite():
     except Exception as e:
         return jsonify({'message': f'unknown server error'}), 500
     
+@app.route("/api/top-popular-movies", methods=["GET"])
+@login_required
+def get_top_popular_movies():
+    try:
+        df = pd.read_csv("../data/movie_dataset.csv", dtype={"title": str})
 
+        if "title" not in df.columns or "popularity" not in df.columns:
+            return jsonify({"error": "Dataset missing required columns"}), 400
+
+        df = df.dropna(subset=["title", "popularity"]).drop_duplicates(subset="title")
+        top_movies = df.sort_values(by="popularity", ascending=False).head(15)
+
+        tmdb_api_key = os.environ.get("TMDB_API_KEY")
+        if not tmdb_api_key:
+            return jsonify({"error": "TMDB API key is not set"}), 500
+
+        movie_data = []
+
+        for title in top_movies["title"].tolist():
+            # Call TMDB Search API to get poster_path for each title
+            tmdb_search_url = "https://api.themoviedb.org/3/search/movie"
+            params = {
+                "api_key": tmdb_api_key,
+                "query": title,
+            }
+
+            response = requests.get(tmdb_search_url, params=params)
+            if response.status_code == 200:
+                results = response.json().get("results")
+                if results:
+                    poster_path = results[0].get("poster_path")  # Take first match
+                else:
+                    poster_path = None
+            else:
+                poster_path = None
+
+            movie_data.append({
+                "title": title,
+                "poster_path": poster_path
+            })
+
+        return jsonify({"top_10_popular_movies": movie_data}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/login', methods=['GET','POST'])
 def get_user():
@@ -272,6 +336,41 @@ def get_favourites():
         return jsonify({"movies": movies})
     except Exception as e:
             return jsonify({'message': f'unknown server error {e}'}), 500
+
+@app.route("/api/get-similar-movies", methods=['POST'])
+@login_required
+def get_similar_movies():
+    try:
+        req = request.get_json(silent=True)
+        
+        if req is None or "movie_id" not in req:
+            return jsonify({"message": "movie_id is required"}), 400
+
+        movie_id = req['movie_id']
+
+        select_similar_movies_statement = """
+            SELECT m2.id, m2.title, m2.overview
+            FROM movies m2
+            JOIN movies_genres mg2 ON m2.id = mg2.movies_id
+            JOIN movies_genres mg ON mg.genres_id = mg2.genres_id
+            WHERE mg.movies_id = %s
+            AND m2.id != mg.movies_id
+            LIMIT 15;
+        """
+
+        # Using connection pool and handling connection within a context manager
+        with connection_pool.get_connection() as connection:
+            with connection.cursor(dictionary=True) as cursor:
+                cursor.execute(select_similar_movies_statement, (movie_id,))
+                similar_movies = cursor.fetchall()
+
+        if not similar_movies:
+            return jsonify({"message": "No similar movies found"}), 404
+
+        return jsonify({"similar_movies": similar_movies}), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Unknown server error: {str(e)}"}), 500
 
 @app.route("/api/get-movies", methods=['GET'])
 @login_required
