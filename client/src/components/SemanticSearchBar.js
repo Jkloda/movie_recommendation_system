@@ -56,7 +56,7 @@ export function SemanticSearchBar() {
       let splitArray;
       let moviesArray;
       if (movies.length > 0) {
-        splitArray = movies.split("]  [");
+        splitArray = movies[0].split("]  [");
         let lastIndex = splitArray.length - 1;
 
         splitArray[0] = await splitArray[0].slice(1, splitArray[0].length - 1);
@@ -106,8 +106,18 @@ export function SemanticSearchBar() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="search-results">
-        {movies && typeof movies === "string" ? (
-          <p>{movies}</p>
+        {formattedMovies.length > 0 ? (
+          <div className="movie-results">
+            {formattedMovies.map((movie, index) => {
+              return (
+                <div key={`movie_${index}`} className="movie-card">
+                  <p>{movie[0]}</p>
+                </div>
+              );
+            })}
+          </div>
+        ) : isLoading ? (
+          <p>Loading...</p>
         ) : (
           <p>No results found.</p>
         )}
