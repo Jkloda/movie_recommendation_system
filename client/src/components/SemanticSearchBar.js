@@ -41,7 +41,6 @@ export function SemanticSearchBar() {
           data.message || data.error || "Failed to fetch results"
         );
       }
-
       setMovies(data.movies || "");
     } catch (err) {
       setError(err.message);
@@ -50,13 +49,13 @@ export function SemanticSearchBar() {
       setIsLoading(false);
     }
   };
-
+  
   useEffect(() => {
     (async function formatMovies() {
       let splitArray;
       let moviesArray;
       if (movies.length > 0) {
-        splitArray = movies.split("]  [");
+        splitArray = movies[0].split("]  [");
         let lastIndex = splitArray.length - 1;
 
         splitArray[0] = await splitArray[0].slice(1, splitArray[0].length - 1);
@@ -69,9 +68,7 @@ export function SemanticSearchBar() {
           return movie.split("§ ");
         });
         setFormattedMovies(moviesArray);
-        console.log(moviesArray);
       }
-      console.log(splitArray);
     })();
   }, [movies]);
 

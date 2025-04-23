@@ -5,7 +5,7 @@ export const PopularMovies = () => {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const imageBaseUrl = process.env.REACT_APP_TMDB_IMAGE_BASE_URL;
+  const imageBaseUrl = "https://image.tmdb.org/t/p/w500"
 
   const scrollRef = useRef(null);
 
@@ -32,7 +32,7 @@ export const PopularMovies = () => {
         setLoading(false);
       }
     };
-
+        
     fetchMovies();
   }, []);
 
@@ -60,16 +60,20 @@ export const PopularMovies = () => {
         </button>
 
         <ul className="movie-list" ref={scrollRef}>
-          {movies.map(({ title, poster_path }, index) => (
-            <div className="movie-card" key={index}>
-              <img
-                src={`${imageBaseUrl}${poster_path}`}
-                alt={title}
-                className="movie-img"
-              />
-              <p className="movie-title">{title}</p>
-            </div>
-          ))}
+          {
+            movies
+            ?movies.map(({ title, poster_path }, index) => (
+              <div className="movie-card" key={`top_${index}`}>
+                <img
+                  src={`${imageBaseUrl}${poster_path}`}
+                  alt={title}
+                  className="movie-img"
+                />
+                <p className="movie-title">{title}</p>
+              </div>
+            ))
+            :null
+          }
         </ul>
 
         <button className="scroll-button right" onClick={() => scroll("right")}>

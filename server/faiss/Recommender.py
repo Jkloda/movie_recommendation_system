@@ -1,5 +1,6 @@
 from Indexer import Indexer
 from Http import HttpLayer
+import pdb
 
 class Recommender:
     def __init__(self):
@@ -14,9 +15,11 @@ class Recommender:
         self.recommendation.append(str(index_results))
 
     async def get_recommendation(self, favourites):
+        pdb.set_trace()
         self.search_index(favourites)
         new_recommendations = await self.httpLayer.prompt_lama(self.recommendation[0])
         self.recommendation = []
+        print(new_recommendations)
         self.recommendation.append(new_recommendations.replace("\n", " ").replace("\\", ""))
         return self.recommendation
  
