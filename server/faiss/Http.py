@@ -11,15 +11,21 @@ class HttpLayer():
     async def prompt_lama(self, prompt):
         body = {
             'model': 'llama3.2',
-            'prompt': f'ten most similar movies, no additional text, do not repeat movies in prompt, format [title§ description], [title§ description], given the following {prompt}',
+            'prompt': f'return the top ten matching movie titles, adding no other text other than a list of titles in a single string with , separating them: given the following {prompt}',
             'stream': False
         }
         try:
             timeout = httpx.Timeout(30.0, connect=30.0)
+<<<<<<< HEAD
             async with httpx.AsyncClient(transport=self.transport, timeout=timeout) as client:
+=======
+            async with httpx.AsyncClient(transport=self.transport, timeout=None) as client:
+>>>>>>> f017095f298fb2367f5d5e0358293c38b11486bd
                 response = await client.post(url=self.url, headers=self.headers, json=body)
                 if response.status_code == 200:  
-                    return response.json()['response']
+                    response_ollama = response.json()['response']
+                    print(response_ollama)
+                    return response_ollama
                 else:
                     return 'error', 400
         except Exception as e:
