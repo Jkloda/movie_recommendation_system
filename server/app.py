@@ -108,10 +108,13 @@ def get_data():
 @login_required
 async def get_recommendations():
     recommender = Recommender()
-    req = request.get_json(silent=True) or {}
-    print("Parsed JSON:", req)  # Debug line
-    genre = req.get('genre', False)
-    search = req.get('search', False)
+    req = request.get_json(silent=True)
+    genre = False
+    search = False
+    if 'genre' in req:
+        genre = req['genre']
+    if 'search' in req: 
+        search = req['search']
     user_id = current_user.id
     try:
         if genre: 
@@ -120,7 +123,7 @@ async def get_recommendations():
                 JOIN movies_keywords ON movies.id = movies_keywords.movies_id JOIN keywords ON movies_keywords.keywords_id = keywords.id \
                 JOIN movies_genres ON movies.id = movies_genres.movies_id JOIN genres ON movies_genres.genres_id = genres.id \
                 JOIN movies_actors ON movies.id = movies_actors.movies_id JOIN actors ON movies_actors.actors_id = actors.id \
-                WHERE genres.genre = %s AND users_movies.users_id = %s GROUP BY movies.id;"
+                WHERE genres.genre = %s AND users_movies.users_id = %s GROUP BY movies.id ORDER BY movies.title;"
             with connection_pool.get_connection() as connection:
                 with connection.cursor(dictionary=True) as cursor:
                     cursor.execute(select_movies_statement, (genre, user_id))
@@ -130,8 +133,6 @@ async def get_recommendations():
             result = await recommender.get_recommendation(movies)
         else: 
             result = await recommender.get_recommendation(search)
-        for movie in result:
-            title = movie.get("title", "")
         return jsonify({'movies': result})
     except Exception as e:
         return jsonify({'error: ': str(e)})
