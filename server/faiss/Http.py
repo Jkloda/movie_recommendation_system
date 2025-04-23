@@ -15,7 +15,8 @@ class HttpLayer():
             'stream': False
         }
         try:
-            async with httpx.AsyncClient(transport=self.transport, timeout=30.0) as client:
+            timeout = httpx.Timeout(30.0, connect=30.0)
+            async with httpx.AsyncClient(transport=self.transport, timeout=None) as client:
                 response = await client.post(url=self.url, headers=self.headers, json=body)
                 if response.status_code == 200:  
                     return response.json()['response']
