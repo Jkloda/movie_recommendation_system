@@ -32,7 +32,6 @@ class Indexer:
 
     # concatenate data columns, chunk text, get dot product of chunked vector array and return mean vector
     def embed_movie(self, movies):
-        #pdb.set_trace()
         text_input = ''
         if isinstance(movies, str):
             text_input = movies

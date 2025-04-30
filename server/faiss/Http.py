@@ -16,11 +16,7 @@ class HttpLayer():
         }
         try:
             timeout = httpx.Timeout(30.0, connect=30.0)
-<<<<<<< HEAD
-            async with httpx.AsyncClient(transport=self.transport, timeout=timeout) as client:
-=======
             async with httpx.AsyncClient(transport=self.transport, timeout=None) as client:
->>>>>>> f017095f298fb2367f5d5e0358293c38b11486bd
                 response = await client.post(url=self.url, headers=self.headers, json=body)
                 if response.status_code == 200:  
                     response_ollama = response.json()['response']
