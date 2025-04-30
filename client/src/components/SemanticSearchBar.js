@@ -57,28 +57,12 @@ export function SemanticSearchBar() {
       let splitArray;
       let moviesArray;
       if (movies.length > 0) {
-<<<<<<< HEAD
-        splitArray = movies[0].split("]  [");
-        let lastIndex = splitArray.length - 1;
-
-        splitArray[0] = await splitArray[0].slice(1, splitArray[0].length - 1);
-
-        splitArray[lastIndex] = await splitArray[lastIndex].slice(
-          splitArray[lastIndex][0],
-          splitArray[lastIndex].length - 1
-        );
-        moviesArray = await splitArray.map((movie) => {
-          return movie.split("§ ");
-        });
-        setFormattedMovies(moviesArray);
-=======
         splitArray = movies[0].split(",");
         let formattedMovies = splitArray.map((movie) => {
           return movie.trim();
         });
         setFormattedMovies(formattedMovies);
         console.log(formattedMovies);
->>>>>>> f017095f298fb2367f5d5e0358293c38b11486bd
       }
     })();
   }, [movies]);
