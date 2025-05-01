@@ -1,14 +1,48 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Navbar } from "../../components/Navbar.js";
 
 const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 
-export const Profile = () => {
+export const Profile = ({ authFlag }) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [favourites, setFavourites] = useState([]);
   const [posters, setPosters] = useState([]);
   const scrollRef = useRef(null);
   const [filter, setFilter] = useState([]);
+  // create state and navigation for auth check (Martin)
+  const [checkAuth, setCheckAuth] = useState(undefined);
+  const navigate = useNavigate();
+
+  // on mount check server, using session cookie, if user is authenticated (Martin)
+  useEffect(() => {
+    async function authenticator() {
+      const response = await fetch("https://127.0.0.1:443/check_auth", {
+        method: "GET",
+        credentials: "include",
+      });
+      const jsonResponse = await response.json();
+      return jsonResponse.authenticated;
+    }
+    async function trigger() {
+      let auth = await authenticator();
+      setCheckAuth(auth);
+    }
+    if (authFlag) trigger();
+  }, []);
+
+  // side effect to check if user authentication is true and redirect to login if not
+  useEffect(() => {
+    if (checkAuth != undefined) {
+      if (checkAuth) {
+        authFlag(true);
+      } else {
+        authFlag(false);
+        navigate("/login");
+      }
+    }
+  }, [checkAuth]);
 
   // Julia
   const fetchMoviePoster = async ({ title }) => {
@@ -83,6 +117,7 @@ export const Profile = () => {
   // profile component HTML (Martin)
   return (
     <>
+      <Navbar />
       {
         <div>
           <div
@@ -137,68 +172,67 @@ export const Profile = () => {
                   overflowX: "hidden",
                 }}
               >
-                {
-                  // Populate posters to user favourites list
-                  posters
-                    ? posters.map((poster, index) => {
-                        return (
-                          <div
+                {// Populate posters to user favourites list
+                posters
+                  ? posters.map((poster, index) => {
+                      return (
+                        <div
+                          style={{
+                            transition: "filter 0.3s ease-in-out",
+                            filter: filter[index]
+                              ? "grayscale(100%)"
+                              : "grayscale(0%)",
+                          }}
+                          onMouseEnter={() => {
+                            // apply greyscale filter on mouse enter (Martin)
+                            let newFilterArray = [...filter];
+                            newFilterArray[index] = true;
+                            setFilter(newFilterArray);
+                          }}
+                          onMouseLeave={() => {
+                            // remove greyscale filter on mouse exit (Martin)
+                            let newFilterArray = [...filter];
+                            newFilterArray[index] = false;
+                            setFilter(newFilterArray);
+                          }}
+                          onClick={() => {
+                            // remove movie from favourites, filter and posters array based on index position (Martin)
+                            let newFavouritesArray = [...favourites];
+                            let newFilterArray = [...filter];
+                            let newPostersArray = [...posters];
+                            newPostersArray.splice(index, 1);
+                            newFavouritesArray.splice(index, 1);
+                            newFilterArray.splice(index, 1);
+                            setFavourites(newFavouritesArray);
+                            setFilter(newFilterArray);
+                            setPosters(newPostersArray);
+                            fetch(
+                              "https://127.0.0.1:443/api/delete-favourite",
+                              {
+                                method: "DELETE",
+                                credentials: "include",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  title: favourites[index].title,
+                                }),
+                              }
+                            );
+                          }}
+                          key={`movie_${index}`}
+                        >
+                          <img
+                            src={`https://image.tmdb.org/t/p/w500${poster}`}
+                            className="movie-img"
                             style={{
-                              transition: "filter 0.3s ease-in-out",
-                              filter: filter[index]
-                                ? "grayscale(100%)"
-                                : "grayscale(0%)",
+                              width: "200px",
                             }}
-                            onMouseEnter={() => {
-                              // apply greyscale filter on mouse enter (Martin)
-                              let newFilterArray = [...filter];
-                              newFilterArray[index] = true;
-                              setFilter(newFilterArray);
-                            }}
-                            onMouseLeave={() => {
-                              // remove greyscale filter on mouse exit (Martin)
-                              let newFilterArray = [...filter];
-                              newFilterArray[index] = false;
-                              setFilter(newFilterArray);
-                            }}
-                            onClick={() => {
-                              // remove movie from favourites, filter and posters array based on index position (Martin)
-                              let newFavouritesArray = [...favourites];
-                              let newFilterArray = [...filter];
-                              let newPostersArray = [...posters];
-                              newPostersArray.splice(index, 1);
-                              newFavouritesArray.splice(index, 1);
-                              newFilterArray.splice(index, 1);
-                              setFavourites(newFavouritesArray);
-                              setFilter(newFilterArray);
-                              setPosters(newPostersArray);
-                              fetch(
-                                "https://127.0.0.1:443/api/delete-favourite",
-                                {
-                                  method: "DELETE",
-                                  credentials: "include",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({
-                                    title: favourites[index].title,
-                                  }),
-                                }
-                              );
-                            }}
-                            key={`movie_${index}`}
-                          >
-                            <img
-                              src={`https://image.tmdb.org/t/p/w500${poster}`}
-                              className="movie-img"
-                              style={{
-                                width: "200px",
-                              }}
-                            />
-                          </div>
-                        );
-                      })
-                    : null}
+                          />
+                        </div>
+                      );
+                    })
+                  : null}
               </ul>
 
               <button

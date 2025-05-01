@@ -1,5 +1,5 @@
 import "./App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate} from "react-router-dom";
 import { useState } from "react";
 import { Login } from "./components/Login.js";
 import { Registration } from "./components/Registration.js";
@@ -13,6 +13,8 @@ const PrivateRoute = ({ isAuthenticated, children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
+
+
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -21,7 +23,7 @@ export function App() {
       <Routes>
         <Route
           path="/login"
-          element={<Login onLogin={() => setIsAuthenticated(true)} />}
+          element={<Login authFlag={() => setIsAuthenticated(true)} />}
         />
         <Route
           path="/SignUp"
@@ -30,40 +32,50 @@ export function App() {
         <Route
           path="/Homepage"
           element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <HomePage />
+            <PrivateRoute 
+              isAuthenticated={isAuthenticated}
+            >
+              <HomePage authFlag={(auth) => setIsAuthenticated(auth)}/>
             </PrivateRoute>
           }
         />
         <Route
           path="/search"
           element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <Searchbar />
+            <PrivateRoute 
+              isAuthenticated={isAuthenticated}
+            >
+              <Searchbar authFlag={(auth) => setIsAuthenticated(auth)}/>
             </PrivateRoute>
           }
         />{" "}
         <Route
           path="/popularmovies"
           element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <PopularMovies />
+            <PrivateRoute 
+              isAuthenticated={isAuthenticated}
+            >
+              <PopularMovies authFlag={(auth) => setIsAuthenticated(auth)}/>
             </PrivateRoute>
           }
         />
         <Route
           path="/semanticsearch"
           element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <SemanticSearchBar />
+            <PrivateRoute 
+              isAuthenticated={isAuthenticated}
+            >
+              <SemanticSearchBar/>
             </PrivateRoute>
           }
         />
         <Route
           path="/profile"
           element={
-            <PrivateRoute isAuthenticated={isAuthenticated}>
-              <Profile />
+            <PrivateRoute 
+              isAuthenticated={isAuthenticated}
+            >
+              <Profile authFlag={(auth) => setIsAuthenticated(auth)}/>
             </PrivateRoute>
           }
         />

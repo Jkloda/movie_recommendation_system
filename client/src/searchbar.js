@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Navbar } from "./components/Navbar.js";
 import heart_selected from "./assets/heart_selected.png";
 import heart_deselected from "./assets/heart_deselected.png";
 import "./styles/Searchbar.css";
@@ -6,7 +8,7 @@ import "./styles/Searchbar.css";
 const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const TMDB_IMAGE_BASE_URL = process.env.REACT_APP_TMDB_IMAGE_BASE_URL;
 
-export function Searchbar() {
+export function Searchbar({ authFlag }) {
   const [formData, setFormData] = useState("");
   const [movies, setMovies] = useState([]);
   const [limit, setLimit] = useState(0);
@@ -14,6 +16,38 @@ export function Searchbar() {
   const [likeButton, setLikeButton] = useState([]);
   const [movieUpdate, setMovieUpdate] = useState(true);
   const scrollRef = useRef(null);
+  // create state and navigation for auth check (Martin)
+  const [checkAuth, setCheckAuth] = useState(undefined);
+  const navigate = useNavigate();
+
+  // on mount check server, using session cookie, if user is authenticated (Martin)
+  useEffect(() => {
+    async function authenticator() {
+      const response = await fetch("https://127.0.0.1:443/check_auth", {
+        method: "GET",
+        credentials: "include",
+      });
+      const jsonResponse = await response.json();
+      return jsonResponse.authenticated;
+    }
+    async function trigger() {
+      let auth = await authenticator();
+      setCheckAuth(auth);
+    }
+    if (authFlag) trigger();
+  }, []);
+
+  // side effect to check if user authentication is true and redirect to login if not
+  useEffect(() => {
+    if (checkAuth != undefined) {
+      if (checkAuth) {
+        authFlag(true);
+      } else {
+        authFlag(false);
+        navigate("/login");
+      }
+    }
+  }, [checkAuth]);
 
   useEffect(() => {
     if (movies && favourites.length > 0) {
@@ -21,20 +55,20 @@ export function Searchbar() {
       setFavourites(unpacked);
     }
   }, [movies]);
-  
+
   useEffect(() => {
     const favStates = movies.map((movie) => favourites.includes(movie.id));
     setLikeButton(favStates);
   }, [favourites, movies]);
 
-  'handle change for search bar (Martin)'
+  // handle change for search bar (Martin)
   const handleChange = (e) => {
     setFormData(e.target.value);
     setMovies([]);
     setLimit(0);
   };
 
-  'Handle click for like button (Martin)'
+  // Handle click for like button (Martin)
   const handleClick = (title, index) => {
     const url = likeButton[index]
       ? "https://127.0.0.1:443/api/delete-favourite"
@@ -113,65 +147,71 @@ export function Searchbar() {
   };
 
   return (
-    <div className="search-container">
-      <form onSubmit={handleSubmit}>
-        <h1 className="search-title">Add movie to your favourites</h1>
-        <input
-          className="search-input"
-          placeholder="Search for movies"
-          type="text"
-          onChange={handleChange}
-          name="searchTerms"
-          value={formData}
-        />
-      </form>
+    <>
+      <Navbar />
+      <div className="search-container">
+        <form onSubmit={handleSubmit}>
+          <h1 className="search-title">Add movie to your favourites</h1>
+          <input
+            className="search-input"
+            placeholder="Search for movies"
+            type="text"
+            onChange={handleChange}
+            name="searchTerms"
+            value={formData}
+          />
+        </form>
 
-      {movies.length > 0 && (
-        <div className="scroll-wrapper">
-          <button className="scroll-btn left" onClick={() => scroll("left")}>
-            ◀
-          </button>
+        {movies.length > 0 && (
+          <div className="scroll-wrapper">
+            <button className="scroll-btn left" onClick={() => scroll("left")}>
+              ◀
+            </button>
 
-          <div className="movie-row-container" ref={scrollRef}>
-            {movies.map((movie, index) => {
-              const posterUrl = movie.poster_path
-                ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
-                : null;
+            <div className="movie-row-container" ref={scrollRef}>
+              {movies.map((movie, index) => {
+                const posterUrl = movie.poster_path
+                  ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
+                  : null;
 
-              return (
-                <div key={`mov-${index}`} className="movie-card">
-                  {posterUrl ? (
-                    <img
-                      src={posterUrl}
-                      alt={movie.title}
-                      className="movie-img"
-                    />
-                  ) : (
-                    <p>No poster available</p>
-                  )}
-                  <h4 className="movie-title">{movie.title}</h4>
-                  <div
-                    onClick={() => handleClick(movie.title, index)}
-                    className="heart-icon"
-                  >
-                    <img
-                      src={
-                        likeButton[index] ? heart_selected : heart_deselected
-                      }
-                      width={25}
-                      alt="heart icon"
-                    />
+                return (
+                  <div key={`mov-${index}`} className="movie-card">
+                    {posterUrl ? (
+                      <img
+                        src={posterUrl}
+                        alt={movie.title}
+                        className="movie-img"
+                      />
+                    ) : (
+                      <p>No poster available</p>
+                    )}
+                    <h4 className="movie-title">{movie.title}</h4>
+                    <div
+                      onClick={() => handleClick(movie.title, index)}
+                      className="heart-icon"
+                    >
+                      <img
+                        src={
+                          likeButton[index] ? heart_selected : heart_deselected
+                        }
+                        width={25}
+                        alt="heart icon"
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-          <button className="scroll-btn right" onClick={() => scroll("right")}>
-            ▶
-          </button>
-        </div>
-      )}
-    </div>
+            <button
+              className="scroll-btn right"
+              onClick={() => scroll("right")}
+            >
+              ▶
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

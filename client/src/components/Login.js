@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Login.css";
 
-export function Login({ onLogin }) {
+export function Login({ authFlag }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [result, setResult] = useState("");
@@ -29,10 +29,11 @@ export function Login({ onLogin }) {
     const jsonRes = await response.json();
     setResult(jsonRes);
     setShow(!show);
-    onLogin?.(); // call it if it exists
-
+    if(jsonRes.authenticated){
+      authFlag?.(true);
     // Redirect to /search
-    setTimeout(() => navigate("/homepage"), 1000);
+      setTimeout(() => navigate("/homepage"), 1000);
+    }
   };
 
   return (

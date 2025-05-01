@@ -260,14 +260,24 @@ def get_user():
                 user_id = account['user_id']
                 user = User(user_id)
                 login_user(user)
-                return jsonify({'message': 'successfully logged in',
-                                "username": f"{username}"}), 200
+                return jsonify({
+                    'message': 'successfully logged in',
+                    "username": f"{username}",
+                    'authenticated': True
+                    }), 200
             else:
                 return jsonify({'message': 'incorrect password'}), 401
         except Exception as e:
             return jsonify({"message": f"error handling request {e}"}), 500
         
-            
+# check if user is authenticated (Martin)
+@app.route('/check_auth', methods=['GET'])
+def check_auth():
+    if current_user.is_authenticated:
+        return jsonify({'authenticated': True}), 200
+    else:
+        return jsonify({'authenticated': False}), 401
+
 # register user by username, email and password (Martin)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
