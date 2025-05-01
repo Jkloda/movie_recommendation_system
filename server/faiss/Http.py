@@ -1,13 +1,13 @@
 import httpx
-import asyncio
 
+# Create HTTP pool for faster connection with llama (Martin)
 class HttpLayer():
     def __init__(self):
         self.transport = httpx.AsyncHTTPTransport(retries=5)
         self.headers = {'Content-Type':'application/json'}
         self.url = 'http://localhost:11434/api/generate'
         
-
+    # create llama prompt, send request and maintain TCP connection for efficient requests to Llama (Martin)
     async def prompt_lama(self, prompt):
         body = {
             'model': 'llama3.2',
@@ -15,8 +15,8 @@ class HttpLayer():
             'stream': False
         }
         try:
-            timeout = httpx.Timeout(30.0, connect=30.0)
-            async with httpx.AsyncClient(transport=self.transport, timeout=None) as client:
+            timeout = httpx.Timeout(10.0, connect=10.0)
+            async with httpx.AsyncClient(transport=self.transport, timeout=timeout) as client:
                 response = await client.post(url=self.url, headers=self.headers, json=body)
                 if response.status_code == 200:  
                     response_ollama = response.json()['response']
@@ -26,7 +26,7 @@ class HttpLayer():
                     return 'error', 400
         except Exception as e:
             return f'error: {e}', 500
-            
+    # get recommendations asynchronously (Martin)
     async def get_recommendations(self, prompt):
         response = await self.prompt_lama(prompt)
         return response

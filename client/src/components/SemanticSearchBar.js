@@ -52,6 +52,7 @@ export function SemanticSearchBar() {
     }
   };
   
+  // format ollama string response into usable array (Martin)
   useEffect(() => {
     (async function formatMovies() {
       let splitArray;
@@ -67,6 +68,7 @@ export function SemanticSearchBar() {
     })();
   }, [movies]);
 
+  // fetch posters based on ollama response (Martin)
   useEffect(() => {
     async function fetchPosters() {
       let moviePosters = await Promise.all(
@@ -124,30 +126,37 @@ export function SemanticSearchBar() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="search-results">
-        {formattedMovies.length > 0 ? (
-          <div className="movie-results">
-            {formattedMovies.map((movie, index) => {
-              const poster = posters[index];
-              if (poster === null) return null;
-              let path = `https://image.tmdb.org/t/p/w500${poster}`;
-              console.log(path);
-              return (
-                <div key={`movie_${index}`} className="movie-card">
-                  <p>{movie}</p>
-                  <img
-                    src={posters[index] != null ? path : null}
-                    alt={movie.title}
-                    className="movie-img"
-                  />
-                </div>
-              );
-            })}
+        {
+          // Display ollama response (Martin)
+          formattedMovies.length > 0 
+          ? (
+            <div className="movie-results">
+              {
+                formattedMovies.map((movie, index) => {
+                  const poster = posters[index];
+                  if (poster === null) return null;
+                  let path = `https://image.tmdb.org/t/p/w500${poster}`;
+                  console.log(path);
+                  return (
+                    <div key={`movie_${index}`} className="movie-card">
+                      <p>{movie}</p>
+                      <img
+                        src={posters[index] != null ? path : null}
+                        alt={movie.title}
+                        className="movie-img"
+                        aria-label={movie.title}
+                      />
+                    </div>
+                  );
+                })
+              }
           </div>
-        ) : isLoading ? (
-          <p>Loading...</p>
-        ) : (
-          <p>No results found.</p>
-        )}
+          ) 
+          : isLoading 
+            ? <p>Loading...</p>
+            : <p>No results found.</p>
+          
+        }
       </div>
     </div>
   );

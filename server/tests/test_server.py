@@ -11,6 +11,7 @@ def client():
     with app.test_client() as client:
         yield client
 
+# Test Login success
 def test_login_success(client):
     response = client.post(
         'api/login',
@@ -23,6 +24,7 @@ def test_login_success(client):
 
     assert response.code == 200
 
+# Test Login fail (Martin)
 def test_login_fail(client):
     response = client.post(
         'api/login',
@@ -35,6 +37,7 @@ def test_login_fail(client):
     assert response.code == 401
     assert response.data == b'incorrect username or password'
 
+# Test sign up success (Martin)
 def test_signup_success(client):
     dob = datetime.datetime(1992, 06, 26)
     response = client.post(
@@ -52,6 +55,7 @@ def test_signup_success(client):
     assert response.code == 201
     assert response.data == b'success'   
 
+# Test sign up fail (Martin)
 def test_signup_failed(client):
     dob = datetime.datetime(1992, 06, 26)
     response = client.post(
@@ -68,6 +72,7 @@ def test_signup_failed(client):
     assert response.code == 400
     assert response.data == b'malformed request' 
 
+# Test get movie recommendations (Martin)
 def test_get_recommendations(client):
     response = client.get('api/recommend')
     response_data = response.data

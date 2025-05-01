@@ -3,13 +3,14 @@ import { useEffect, useState, useRef } from "react";
 const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 
 export const Profile = () => {
-  const [username, setUsername] = useState();
-  const [email, setEmail] = useState();
-  const [favourites, setFavourites] = useState();
-  const [posters, setPosters] = useState();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [favourites, setFavourites] = useState([]);
+  const [posters, setPosters] = useState([]);
   const scrollRef = useRef(null);
   const [filter, setFilter] = useState([]);
 
+  // Julia
   const fetchMoviePoster = async ({ title }) => {
     try {
       const res = await fetch(
@@ -23,6 +24,7 @@ export const Profile = () => {
     }
   };
 
+  // Julia
   const scroll = (direction) => {
     const { current } = scrollRef;
     if (current) {
@@ -34,6 +36,7 @@ export const Profile = () => {
     }
   };
 
+  // Get favourited movies and account info then set state (Martin)
   useEffect(() => {
     (async function get_favourites() {
       const response = await fetch("https://127.0.0.1:443/api/get-favourites", {
@@ -54,6 +57,7 @@ export const Profile = () => {
     })();
   }, []);
 
+  // Get movie posters and create filter array (Martin)
   useEffect(() => {
     if (favourites) {
       async function fetchPosters() {
@@ -76,6 +80,7 @@ export const Profile = () => {
     }
   }, [favourites]);
 
+  // profile component HTML (Martin)
   return (
     <>
       {
@@ -132,62 +137,68 @@ export const Profile = () => {
                   overflowX: "hidden",
                 }}
               >
-                {posters
-                  ? posters.map((poster, index) => {
-                      return (
-                        <div
-                          style={{
-                            transition: "filter 0.3s ease-in-out",
-                            filter: filter[index]
-                              ? "grayscale(100%)"
-                              : "grayscale(0%)",
-                          }}
-                          onMouseEnter={() => {
-                            let newFilterArray = [...filter];
-                            newFilterArray[index] = true;
-                            setFilter(newFilterArray);
-                          }}
-                          onMouseLeave={() => {
-                            let newFilterArray = [...filter];
-                            newFilterArray[index] = false;
-                            setFilter(newFilterArray);
-                          }}
-                          onClick={() => {
-                            let newFavouritesArray = [...favourites];
-                            let newFilterArray = [...filter];
-                            let newPostersArray = [...posters];
-                            newPostersArray.splice(index, 1);
-                            newFavouritesArray.splice(index, 1);
-                            newFilterArray.splice(index, 1);
-                            setFavourites(newFavouritesArray);
-                            setFilter(newFilterArray);
-                            fetch(
-                              "https://127.0.0.1:443/api/delete-favourite",
-                              {
-                                method: "DELETE",
-                                credentials: "include",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                  title: favourites[index].title,
-                                }),
-                              }
-                            );
-                          }}
-                          key={`movie_${index}`}
-                        >
-                          <img
-                            src={`https://image.tmdb.org/t/p/w500${poster}`}
-                            className="movie-img"
+                {
+                  // Populate posters to user favourites list
+                  posters
+                    ? posters.map((poster, index) => {
+                        return (
+                          <div
                             style={{
-                              width: "200px",
+                              transition: "filter 0.3s ease-in-out",
+                              filter: filter[index]
+                                ? "grayscale(100%)"
+                                : "grayscale(0%)",
                             }}
-                          />
-                        </div>
-                      );
-                    })
-                  : null}
+                            onMouseEnter={() => {
+                              // apply greyscale filter on mouse enter (Martin)
+                              let newFilterArray = [...filter];
+                              newFilterArray[index] = true;
+                              setFilter(newFilterArray);
+                            }}
+                            onMouseLeave={() => {
+                              // remove greyscale filter on mouse exit (Martin)
+                              let newFilterArray = [...filter];
+                              newFilterArray[index] = false;
+                              setFilter(newFilterArray);
+                            }}
+                            onClick={() => {
+                              // remove movie from favourites, filter and posters array based on index position (Martin)
+                              let newFavouritesArray = [...favourites];
+                              let newFilterArray = [...filter];
+                              let newPostersArray = [...posters];
+                              newPostersArray.splice(index, 1);
+                              newFavouritesArray.splice(index, 1);
+                              newFilterArray.splice(index, 1);
+                              setFavourites(newFavouritesArray);
+                              setFilter(newFilterArray);
+                              setPosters(newPostersArray);
+                              fetch(
+                                "https://127.0.0.1:443/api/delete-favourite",
+                                {
+                                  method: "DELETE",
+                                  credentials: "include",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    title: favourites[index].title,
+                                  }),
+                                }
+                              );
+                            }}
+                            key={`movie_${index}`}
+                          >
+                            <img
+                              src={`https://image.tmdb.org/t/p/w500${poster}`}
+                              className="movie-img"
+                              style={{
+                                width: "200px",
+                              }}
+                            />
+                          </div>
+                        );
+                      })
+                    : null}
               </ul>
 
               <button

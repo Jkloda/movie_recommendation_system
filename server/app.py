@@ -1,9 +1,8 @@
-from flask import Flask, jsonify, session, request, redirect, url_for
-from flask_cors import CORS, cross_origin
+from flask import Flask, jsonify, request, redirect
+from flask_cors import CORS
 import os
 import re
 import sys
-from werkzeug import Response
 import json
 import requests
 import json
@@ -12,11 +11,9 @@ from passlib.hash import sha256_crypt
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
 import pandas as pd
-import numpy as np
 sys.path.append(os.path.abspath('./faiss'))
 from oauthlib.oauth2 import WebApplicationClient
 from Recommender import Recommender
-from urllib.parse import unquote
 from dotenv import load_dotenv
 from flasgger import Swagger
 
@@ -24,7 +21,8 @@ load_dotenv()
 
 app = Flask(__name__)
 swagger = Swagger(app)
-# Configuration
+
+# Configuration (Martin)
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_SEARCH_URL = "https://api.themoviedb.org/3/search/movie"
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500"
@@ -41,6 +39,7 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = 'None'
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+# Set-up CORS and app (Martin)
 CORS(
     app, 
     supports_credentials=True, 
@@ -52,7 +51,7 @@ client = WebApplicationClient(GOOGLE_CLIENT_ID)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-
+# create database connection pool (Martin)
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     pool_name="moviefinder_pool",
     user=os.getenv('USER'),
@@ -61,15 +60,18 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     database=os.getenv('DATABASE')
 )
 
+# Get google SSO url (Martin)
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
+# auth user object (Martin)
 class User(UserMixin):
     def __init__(self, user_id):
         self.id = user_id
     def get_id(self):
         return self.id
-        
+
+# load user from database by id (Martin)
 @login_manager.user_loader
 def load_user(user_id):
     try:
@@ -84,6 +86,7 @@ def load_user(user_id):
     except Exception as e:
         return None
     
+# (Julia)
 @app.route('/api/data', methods=['GET'])
 @login_required
 def get_data():
@@ -104,6 +107,7 @@ def get_data():
     """
     return jsonify({"message": "Hello from Flask with CORS!"}), 200
 
+# search for user recommendations based on genre or search query (Martin)
 @app.route('/api/search', methods=['POST'])
 @login_required
 async def get_recommendations():
@@ -137,6 +141,7 @@ async def get_recommendations():
     except Exception as e:
         return jsonify({'error: ': str(e)})
     
+# add favourited movie to users_movies table (Martin)
 @app.route('/api/add-favourite', methods=['POST'])
 @login_required
 def add_favourite():
@@ -161,7 +166,8 @@ def add_favourite():
         return jsonify({'message': 'success'}), 200
     except Exception as e:
         return jsonify({'message': f'unknown server error'}), 500
-    
+
+# delete favourited movie from users_movies table (Martin)
 @app.route('/api/delete-favourite', methods=['DELETE'])
 @login_required
 def delete_favourite():
@@ -186,7 +192,8 @@ def delete_favourite():
         return jsonify({'message': 'success'}), 200
     except Exception as e:
         return jsonify({'message': f'unknown server error'}), 500
-    
+
+# Julia
 @app.route("/api/top-popular-movies", methods=["GET"])
 @login_required
 def get_top_popular_movies():
@@ -232,7 +239,8 @@ def get_top_popular_movies():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
+# login user by username and password (Martin)
 @app.route('/login', methods=['GET','POST'])
 def get_user():
     if request.method == 'POST':
@@ -260,7 +268,7 @@ def get_user():
             return jsonify({"message": f"error handling request {e}"}), 500
         
             
-
+# register user by username, email and password (Martin)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     result = request.get_json(silent=True)
@@ -305,6 +313,7 @@ def register():
     else:
         return jsonify({'message': 'please check http request body, username, email, password are missing or method not POST '}), 400 
 
+# get user account details (Martin)
 @app.route("/api/get-account", methods=['GET'])
 @login_required
 def get_account():
@@ -321,7 +330,7 @@ def get_account():
     except Exception as e:
         return jsonify({'message': 'unknown server error'})
 
-
+# get all user favourited movies by user_id (Martin)
 @app.route("/api/get-favourites", methods=['GET'])
 @login_required
 def get_favourites():
@@ -338,6 +347,7 @@ def get_favourites():
     except Exception as e:
             return jsonify({'message': f'unknown server error {e}'}), 500
 
+# (Julia)
 @app.route("/api/get-similar-movies", methods=['POST'])
 @login_required
 def get_similar_movies():
@@ -372,7 +382,8 @@ def get_similar_movies():
 
     except Exception as e:
         return jsonify({"message": f"Unknown server error: {str(e)}"}), 500
-
+    
+# get movies from database based on search criteria or no keywords, return 40 at a time (Martin)
 @app.route("/api/get-movies", methods=['GET'])
 @login_required
 def get_movies():
@@ -419,7 +430,7 @@ def get_movies():
     except Exception as e:
             return jsonify({'message': f'unknown server error {e}'}), 500
 
-
+# Create endpoint for Google SSO (Martin) 
 @app.route("/google-login")
 def login():
     # Generate Login URL and send redirect to URL
@@ -430,9 +441,11 @@ def login():
         authorization_endpoint,
         redirect_uri=request.base_url + "/callback",
         scope=["openid", "email", "profile"],
+        prompt="select_account"
     )
     return redirect(request_uri)
 
+# Google SSO callback (Martin)
 @app.route("/google-login/callback")
 def callback():
     # Get authorization code 
@@ -464,8 +477,7 @@ def callback():
     if userinfo_response.json().get("email_verified"):
         unique_id = userinfo_response.json()["sub"]
         users_email = userinfo_response.json()["email"]
-        picture = userinfo_response.json()["picture"]
-        users_name = userinfo_response.json()["given_name"]
+        username = users_email.split('@')[0]
     else:
         return "User email not available or not verified by Google.", 400
     
@@ -478,23 +490,24 @@ def callback():
     if user_id:
         user = User(user_id)
         login_user(user)
-        return redirect('https://localhost:3000/')
+        return redirect('https://127.0.0.1:3000/semanticsearch')
     # If not exists then register user and follow login flow
     else: 
-        cursor.execute('INSERT INTO users (username, email, google_id) VALUES (%s, %s, %s);', (users_name, users_email, unique_id,))
+        cursor.execute('INSERT INTO users (username, email, google_id) VALUES (%s, %s, %s);', (username, users_email, unique_id,))
         connection.commit()
         cursor.execute('SELECT LAST_INSERT_ID() AS user_id;')
         user_id = cursor.fetchone()
         user = User(user_id)
         login_user(user)
-        return redirect('https://localhost:3000/')
+        return redirect('https://127.0.0.1:3000/semanticsearch')
 
 
-
+# logout user (Martin)
 @app.route('/logout')
 def logout():
     logout_user()
     return jsonify({"message": "successfully logged out"}), 200
 
+# init server with SSL (Martin)
 if __name__ == '__main__':
     app.run(port=443, ssl_context=("cert.pem", "key.pem"))

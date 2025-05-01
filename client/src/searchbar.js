@@ -14,24 +14,27 @@ export function Searchbar() {
   const [likeButton, setLikeButton] = useState([]);
   const [movieUpdate, setMovieUpdate] = useState(true);
   const scrollRef = useRef(null);
+
   useEffect(() => {
     if (movies && favourites.length > 0) {
       const unpacked = favourites.map((fav) => fav.id || fav);
       setFavourites(unpacked);
     }
   }, [movies]);
-
+  
   useEffect(() => {
     const favStates = movies.map((movie) => favourites.includes(movie.id));
     setLikeButton(favStates);
   }, [favourites, movies]);
 
+  'handle change for search bar (Martin)'
   const handleChange = (e) => {
     setFormData(e.target.value);
     setMovies([]);
     setLimit(0);
   };
 
+  'Handle click for like button (Martin)'
   const handleClick = (title, index) => {
     const url = likeButton[index]
       ? "https://127.0.0.1:443/api/delete-favourite"

@@ -12,6 +12,7 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
     database=os.getenv('DATABASE')
 )
 
+# database population function (Martin)
 def create_movie_table():
     # Set up headers for pulling data, and headers with associated types for populating table
     headers = ["genres", "keywords", "original_title", "overview", "popularity", "release_date", "runtime", "spoken_languages", "title", "cast", "director"]
