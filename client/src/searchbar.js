@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Navbar } from "./components/Navbar.js";
 import heart_selected from "./assets/heart_selected.png";
 import heart_deselected from "./assets/heart_deselected.png";
 import "./styles/Searchbar.css";
@@ -110,65 +111,67 @@ export function Searchbar() {
   };
 
   return (
-    <div className="search-container">
-      <form onSubmit={handleSubmit}>
-        <h1 className="search-title">Add movie to your favourites</h1>
-        <input
-          className="search-input"
-          placeholder="Search for movies"
-          type="text"
-          onChange={handleChange}
-          name="searchTerms"
-          value={formData}
-        />
-      </form>
-
-      {movies.length > 0 && (
-        <div className="scroll-wrapper">
-          <button className="scroll-btn left" onClick={() => scroll("left")}>
-            ◀
-          </button>
-
-          <div className="movie-row-container" ref={scrollRef}>
-            {movies.map((movie, index) => {
-              const posterUrl = movie.poster_path
-                ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
-                : null;
-
-              return (
-                <div key={`mov-${index}`} className="movie-card">
-                  {posterUrl ? (
-                    <img
-                      src={posterUrl}
-                      alt={movie.title}
-                      className="movie-img"
-                    />
-                  ) : (
-                    <p>No poster available</p>
-                  )}
-                  <h4 className="movie-title">{movie.title}</h4>
-                  <div
-                    onClick={() => handleClick(movie.title, index)}
-                    className="heart-icon"
-                  >
-                    <img
-                      src={
-                        likeButton[index] ? heart_selected : heart_deselected
-                      }
-                      width={25}
-                      alt="heart icon"
-                    />
+    <>
+      <Navbar />
+      <div className="search-container">
+        <form onSubmit={handleSubmit}>
+          <h1 className="search-title">Add movie to your favourites</h1>
+          <input
+            className="search-input"
+            placeholder="Search for movies"
+            type="text"
+            onChange={handleChange}
+            name="searchTerms"
+            value={formData}
+          />
+        </form>
+  
+        {movies.length > 0 && (
+          <div className="scroll-wrapper">
+            <button className="scroll-btn left" onClick={() => scroll("left")}>
+              ◀
+            </button>
+  
+            <div className="movie-row-container" ref={scrollRef}>
+              {movies.map((movie, index) => {
+                const posterUrl = movie.poster_path
+                  ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
+                  : null;
+  
+                return (
+                  <div key={`mov-${index}`} className="movie-card">
+                    {posterUrl ? (
+                      <img
+                        src={posterUrl}
+                        alt={movie.title}
+                        className="movie-img"
+                      />
+                    ) : (
+                      <p>No poster available</p>
+                    )}
+                    <h4 className="movie-title">{movie.title}</h4>
+                    <div
+                      onClick={() => handleClick(movie.title, index)}
+                      className="heart-icon"
+                    >
+                      <img
+                        src={
+                          likeButton[index] ? heart_selected : heart_deselected
+                        }
+                        width={25}
+                        alt="heart icon"
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+  
+            <button className="scroll-btn right" onClick={() => scroll("right")}>
+              ▶
+            </button>
           </div>
-
-          <button className="scroll-btn right" onClick={() => scroll("right")}>
-            ▶
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+        )}
+      </div>
+    </>
+  );}
