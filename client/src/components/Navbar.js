@@ -12,6 +12,12 @@ export const Navbar = () => {
       <ul>
         <CustomLink to="/search">Search</CustomLink>
         <CustomLink to="/profile">Profile</CustomLink>
+        <CustomLink to="/login" onClick={() => {
+          fetch("https://127.0.0.1:443/logout", {
+            method: 'GET',
+            credentials: 'include'
+          })
+        }}>Logout</CustomLink>
       </ul>
     </nav>
   );
