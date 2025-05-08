@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../styles/SemanticSearchBar.css";
 const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const TMDB_IMAGE_BASE_URL = process.env.REACT_APP_TMDB_IMAGE_BASE_URL;
@@ -11,6 +11,18 @@ export function SemanticSearchBar() {
   const [error, setError] = useState(null); // State for error handling
   const [formattedMovies, setFormattedMovies] = useState([]);
   const [posters, setPosters] = useState([]);
+  const searchResultsRef = useRef(null);
+
+  const scrollResults = (direction) => {
+    if (searchResultsRef.current) {
+      const scrollAmount = 200;
+      searchResultsRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
   // Handle form submission
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -56,14 +68,14 @@ export function SemanticSearchBar() {
   useEffect(() => {
     (async function formatMovies() {
       let splitArray;
-      let moviesArray;
-      if (movies.length > 0) {
+      if (movies.length > 0 && Array.isArray(movies) && movies[0]) {
         splitArray = movies[0].split(",");
         let formattedMovies = splitArray.map((movie) => {
           return movie.trim();
         });
         setFormattedMovies(formattedMovies);
-        console.log(formattedMovies);
+      } else {
+        setFormattedMovies([]);
       }
     })();
   }, [movies]);
@@ -126,23 +138,25 @@ export function SemanticSearchBar() {
 
       <div className="search-results">
         {formattedMovies.length > 0 ? (
-          <div className="movie-results">
-            {formattedMovies.map((movie, index) => {
-              const poster = posters[index];
-              if (poster === null) return null;
-              let path = `https://image.tmdb.org/t/p/w500${poster}`;
-              console.log(path);
-              return (
-                <div key={`movie_${index}`} className="movie-card">
-                  <p>{movie}</p>
-                  <img
-                    src={posters[index] != null ? path : null}
-                    alt={movie.title}
-                    className="movie-img"
-                  />
-                </div>
-              );
-            })}
+          <div className="movie-results-wrapper">
+            <div className="movie-results" ref={searchResultsRef}>
+              {formattedMovies.map((movie, index) => {
+                const poster = posters[index];
+                if (poster === null) return null;
+                let path = `https://image.tmdb.org/t/p/w500${poster}`;
+                return (
+                  <div key={`movie_${index}`} className="movie-card">
+                    <img
+                      src={posters[index] != null ? path : null}
+                      alt={movie}
+                      className="movie-img"
+                    />
+                    <p>{movie}</p>
+                  </div>
+                );
+              })}
+            </div>
+          
           </div>
         ) : isLoading ? (
           <p>Loading...</p>
