@@ -1,35 +1,44 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import SemanticSearchBar from "../components/SemanticSearchBar";
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { SemanticSearchBar } from "../components/SemanticSearchBar";
 import "@testing-library/jest-dom";
 
+global.fetch = jest.fn();
+
 describe("SemanticSearchBar", () => {
+  beforeEach(() => {
+    fetch.mockClear();
+  });
+
   test("renders search bar and input field", () => {
     render(<SemanticSearchBar />);
-
-    expect(screen.getByPlaceholderText(/search by/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Search by Genre/i)).toBeInTheDocument();
   });
 
-  test("filters movies based on name", () => {
+  test('shows error message when both inputs are empty and form is submitted', async () => {
     render(<SemanticSearchBar />);
-
-    const input = screen.getByPlaceholderText(/search by name/i);
-    fireEvent.change(input, { target: { value: "Inception" } });
-
-    expect(screen.getByText("Inception")).toBeInTheDocument();
-    expect(screen.queryByText("The Dark Knight")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Search/i }));
+    expect(await screen.findByText(/Please provide a genre or query/i)).toBeInTheDocument();
   });
+  
+  test("display movie titles", async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ movies: ["Inception"] }),
+    });
 
-  test("filters movies based on genre", () => {
     render(<SemanticSearchBar />);
 
-    const select = screen.getByRole("combobox");
-    fireEvent.change(select, { target: { value: "genre" } });
+    fireEvent.change(screen.getByLabelText(/Plot\/Description/i), {
+      target: { value: "sci-fi action" },
+    });
 
-    const input = screen.getByPlaceholderText(/search by genre/i);
-    fireEvent.change(input, { target: { value: "Sci-Fi" } });
+    fireEvent.click(screen.getByRole("button", { name: /search/i }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
 
     expect(screen.getByText("Inception")).toBeInTheDocument();
-    expect(screen.getByText("Interstellar")).toBeInTheDocument();
-    expect(screen.queryByText("The Dark Knight")).not.toBeInTheDocument();
   });
 });
