@@ -1,0 +1,103 @@
+/* SemanticSearchBar.css */
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
+
+.semantic-search-container {
+  font-family: "Open Sans", sans-serif;
+  background-color: #0c0c20;
+  color: #f1f1f1;
+  padding: 2rem;
+}
+
+.semantic-search-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.semantic-search-container label {
+  color: #9fa8ab;
+  font-size: 0.9rem;
+}
+
+.semantic-search-container input[type="text"] {
+  background-color: #0c0c0c;
+  color: #f1f1f1;
+  border: 1px solid #226ca1;
+  padding: 0.8rem;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.semantic-search-container input[type="text"]::placeholder {
+  color: #9fa8ab;
+}
+
+.semantic-search-container button {
+  background-color: #11518a;
+  color: #f1f1f1;
+  border: none;
+  padding: 0.9rem 1.5rem;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.semantic-search-container button:hover {
+  background-color: #226ca1;
+}
+
+.semantic-search-container button:disabled {
+  background-color: #9fa8ab;
+  cursor: not-allowed;
+}
+
+.semantic-search-container .error-message {
+  color: #f44336;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 5px;
+}
+
+.semantic-search-container .search-results {
+  margin-top: 2rem;
+}
+
+.semantic-search-container .search-results p {
+  color: #9fa8ab;
+  font-size: 1rem;
+}
+
+.semantic-search-container .movie-results {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.semantic-search-container .movie-card {
+  min-width: 160px;
+  max-width: 160px;
+  background-color: #0c0c0c;
+  border-radius: 10px;
+  padding: 0.5rem;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+.semantic-search-container .movie-card p {
+  color: #9fa8ab;
+  font-size: 0.85rem;
+  line-height: 1.1;
+  margin-bottom: 0.4rem;
+}
+
+.semantic-search-container .movie-img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}

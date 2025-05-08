@@ -1,93 +1,213 @@
+/* Registration.css */
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
+
 .signup-container {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: "Open Sans", sans-serif;
+  background-color: #0c0c20;
+  color: #f1f1f1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
 }
 
-/* Heading styling */
 .signup-container h2 {
+  color: #226ca1;
+  font-size: 2rem;
+  margin-bottom: 2rem;
   text-align: center;
-  font-size: 24px;
-  color: #333;
-  margin-bottom: 20px;
 }
 
-/* Form group styling */
+.signup-container form {
+  background-color: #0c0c0c;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; 
+  box-shadow: 0 0 30px rgba(34, 108, 161, 0.3); /* Primary blue with opacity */
+}
+
 .form-group {
-  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Label styling */
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: #333;
+.form-group label {
+  color: #9fa8ab;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
-/* Input field styling */
-input[type="text"],
-input[type="email"],
-input[type="password"] {
-  width: 100%;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  margin-bottom: 10px;
-  transition: border-color 0.3s ease-in-out;
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+  background-color: #111;
+  color: #f1f1f1;
+  border: 1px solid #226ca1;
+  padding: 0.8rem;
+  border-radius: 5px;
+  font-size: 1rem;
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus {
-  border-color: #007bff;
-  outline: none;
+.form-group input::placeholder {
+  color: #9fa8ab;
 }
 
-/* Submit button styling */
-button[type="submit"] {
-  width: 100%;
-  padding: 12px;
-  background-color: #007bff;
-  color: #fff;
+.form-group .error {
+  color: #f44336;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+
+.signup-container button[type="submit"] {
+  background-color: #11518a;
+  color: #f1f1f1;
   border: none;
-  border-radius: 4px;
-  font-size: 16px;
+  padding: 0.9rem 1.5rem;
+  border-radius: 5px;
+  font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
 }
 
-button[type="submit"]:hover {
-  background-color: #0056b3;
+.signup-container button[type="submit"]:hover {
+  background-color: #226ca1;
 }
 
-/* Footer styling */
-footer {
+.signup-container footer {
+  margin-top: 2rem;
   text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
-  color: #555;
+  color: #9fa8ab;
+  font-size: 0.9rem;
 }
 
-/* Link styling */
-#signup-link {
-  color: #007bff;
+.signup-container footer a {
+  color: #226ca1;
   text-decoration: none;
   font-weight: bold;
-  transition: text-decoration 0.3s ease;
 }
 
-#signup-link:hover {
+.signup-container footer a:hover {
   text-decoration: underline;
 }
 
-/* Chat app heading styling */
-footer h1 {
-  font-size: 24px;
-  color: #007bff;
-  margin-top: 20px;
+.signup-container footer div {/* Registration.css */
+  @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap");
+  
+  .signup-container {
+    font-family: "Open Sans", sans-serif;
+    background-color: #0c0c20;
+    color: #f1f1f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  
+  .signup-title {
+    font-size: 2rem;
+    text-align: center;
+    color: #226ca1;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  
+  .signup-form {
+    max-width: 400px;
+    padding: 40px;
+    background-color: #0c0c0c;
+    border-radius: 20px;
+    box-shadow: 0 0 30px rgba(34, 108, 161, 0.3); /* Use primary blue for shadow */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    color: #9fa8ab;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  
+  .input-field {
+    padding: 12px;
+    font-size: 1rem;
+    border: 1px solid #9fa8ab;
+    border-radius: 8px;
+    background-color: #0c0c20;
+    color: #f1f1f1;
+  }
+  
+  .input-field::placeholder {
+    color: #9fa8ab;
+  }
+  
+  .signup-button {
+    padding: 12px;
+    font-size: 1rem;
+    background-color: #226ca1;
+    color: #f1f1f1;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s;
+  }
+  
+  .signup-button:hover {
+    background-color: #11518a;
+  }
+  
+  .error {
+    color: #f44336;
+    font-size: 0.9rem;
+    margin-top: 5px;
+  }
+  
+  .signup-footer {
+    margin-top: 20px;
+    text-align: center;
+    color: #9fa8ab;
+  }
+  
+  .signup-link,
+  .login-link {
+    color: #226ca1;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  .signup-link:hover,
+  .login-link:hover {
+    color: #f1f1f1;
+  }
+  
+  .signup-footer div {
+    margin-top: 1rem;
+  }
+  
+  .signup-footer h1 {
+    color: #f1f1f1;
+    font-size: 1.5rem;
+  }
+  margin-top: 1rem;
+}
+
+.signup-container footer h1 {
+  color: #f1f1f1;
+  font-size: 1.5rem;
 }
